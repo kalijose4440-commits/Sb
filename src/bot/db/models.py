@@ -100,7 +100,9 @@ class ScheduledAnnouncement(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     next_run_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
     )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -126,4 +128,44 @@ class CommandUsageMetric(Base):
         nullable=False,
         server_default=func.now(),
         index=True,
+    )
+
+
+class WelcomeConfig(Base):
+    """Guild-specific welcome message configuration."""
+
+    __tablename__ = "welcome_configs"
+
+    guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    message_template: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default="Welcome {mention} to {guild}!",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class RaidProtectionConfig(Base):
+    """Configuration for simple anti-raid burst detection."""
+
+    __tablename__ = "raid_protection_configs"
+
+    guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    join_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
+    window_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
+    alert_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )

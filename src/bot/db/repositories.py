@@ -10,9 +10,11 @@ from bot.db.models import (
     AutoModKeyword,
     CommandUsageMetric,
     GuildSettings,
+    RaidProtectionConfig,
     ReactionRoleBinding,
     ScheduledAnnouncement,
     TicketThread,
+    WelcomeConfig,
 )
 
 
@@ -309,7 +311,9 @@ class AnnouncementRepository:
         return list(result.scalars().all())
 
     async def get_announcement(
-        self, guild_id: int, announcement_id: int
+        self,
+        guild_id: int,
+        announcement_id: int,
     ) -> ScheduledAnnouncement | None:
         statement = select(ScheduledAnnouncement).where(
             ScheduledAnnouncement.guild_id == guild_id,
@@ -352,7 +356,9 @@ class AnnouncementRepository:
         last_run_at: datetime,
         next_run_at: datetime,
     ) -> ScheduledAnnouncement | None:
-        statement = select(ScheduledAnnouncement).where(ScheduledAnnouncement.id == announcement_id)
+        statement = select(ScheduledAnnouncement).where(
+            ScheduledAnnouncement.id == announcement_id
+        )
         result = await self._session.execute(statement)
         row = result.scalar_one_or_none()
         if row is None:
@@ -411,3 +417,94 @@ class AnalyticsRepository:
         result = await self._session.execute(statement)
         rows = result.all()
         return [(int(user_id), int(uses)) for user_id, uses in rows]
+
+
+class WelcomeRepository:
+    """CRUD access for guild welcome message settings."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_config(self, guild_id: int) -> WelcomeConfig | None:
+        statement = select(WelcomeConfig).where(WelcomeConfig.guild_id == guild_id)
+        result = await self._session.execute(statement)
+        return result.scalar_one_or_none()
+
+    async def upsert_config(
+        self,
+        guild_id: int,
+        *,
+        channel_id: int | None = None,
+        enabled: bool | None = None,
+        message_template: str | None = None,
+        default_template: str = "Welcome {mention} to {guild}!",
+    ) -> WelcomeConfig:
+        row = await self.get_config(guild_id)
+        if row is None:
+            row = WelcomeConfig(
+                guild_id=guild_id,
+                channel_id=channel_id,
+                enabled=enabled if enabled is not None else False,
+                message_template=message_template or default_template,
+            )
+            self._session.add(row)
+        else:
+            if channel_id is not None:
+                row.channel_id = channel_id
+            if enabled is not None:
+                row.enabled = enabled
+            if message_template is not None:
+                row.message_template = message_template
+
+        await self._session.flush()
+        return row
+
+
+class RaidProtectionRepository:
+    """CRUD access for guild raid protection settings."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_config(self, guild_id: int) -> RaidProtectionConfig | None:
+        statement = select(RaidProtectionConfig).where(RaidProtectionConfig.guild_id == guild_id)
+        result = await self._session.execute(statement)
+        return result.scalar_one_or_none()
+
+    async def upsert_config(
+        self,
+        guild_id: int,
+        *,
+        enabled: bool | None = None,
+        join_threshold: int | None = None,
+        window_seconds: int | None = None,
+        alert_channel_id: int | None = None,
+    ) -> RaidProtectionConfig:
+        row = await self.get_config(guild_id)
+        if row is None:
+            row = RaidProtectionConfig(
+                guild_id=guild_id,
+                enabled=enabled if enabled is not None else False,
+                join_threshold=join_threshold or 8,
+                window_seconds=window_seconds or 30,
+                alert_channel_id=alert_channel_id,
+            )
+            self._session.add(row)
+        else:
+            if enabled is not None:
+                row.enabled = enabled
+            if join_threshold is not None:
+                row.join_threshold = join_threshold
+            if window_seconds is not None:
+                row.window_seconds = window_seconds
+            if alert_channel_id is not None:
+                row.alert_channel_id = alert_channel_id
+
+        await self._session.flush()
+        return row
+
+    async def mark_triggered(self, guild_id: int, triggered_at: datetime) -> RaidProtectionConfig:
+        row = await self.upsert_config(guild_id)
+        row.last_triggered_at = triggered_at
+        await self._session.flush()
+        return row

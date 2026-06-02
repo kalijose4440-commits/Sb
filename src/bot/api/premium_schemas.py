@@ -73,3 +73,38 @@ class TicketRead(BaseModel):
     closed_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class WelcomeConfigUpdate(BaseModel):
+    channel_id: int | None = None
+    enabled: bool | None = None
+    message_template: str | None = Field(default=None, min_length=1, max_length=1800)
+
+
+class WelcomeConfigRead(BaseModel):
+    guild_id: int
+    channel_id: int | None
+    enabled: bool
+    message_template: str
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RaidProtectionConfigUpdate(BaseModel):
+    enabled: bool | None = None
+    join_threshold: int | None = Field(default=None, ge=3, le=100)
+    window_seconds: int | None = Field(default=None, ge=10, le=600)
+    alert_channel_id: int | None = None
+
+
+class RaidProtectionConfigRead(BaseModel):
+    guild_id: int
+    enabled: bool
+    join_threshold: int
+    window_seconds: int
+    alert_channel_id: int | None
+    last_triggered_at: datetime | None
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

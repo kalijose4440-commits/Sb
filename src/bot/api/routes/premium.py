@@ -11,15 +11,21 @@ from bot.api.premium_schemas import (
     AnnouncementToggle,
     AutoModKeywordCreate,
     AutoModKeywordRead,
+    RaidProtectionConfigRead,
+    RaidProtectionConfigUpdate,
     ReactionRoleCreate,
     ReactionRoleRead,
     TicketRead,
+    WelcomeConfigRead,
+    WelcomeConfigUpdate,
 )
 from bot.db.repositories import (
     AnnouncementRepository,
     AutoModRepository,
+    RaidProtectionRepository,
     ReactionRoleRepository,
     TicketRepository,
+    WelcomeRepository,
 )
 
 router = APIRouter(prefix="/api/v1/premium", tags=["premium"])
@@ -162,3 +168,66 @@ async def list_open_tickets(guild_id: int, request: Request) -> list[TicketRead]
         repository = TicketRepository(session)
         rows = await repository.list_open_tickets(guild_id)
     return [TicketRead.model_validate(row, from_attributes=True) for row in rows]
+
+
+@router.get("/{guild_id}/welcome", response_model=WelcomeConfigRead)
+async def get_welcome_config(guild_id: int, request: Request) -> WelcomeConfigRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = WelcomeRepository(session)
+        row = await repository.get_config(guild_id)
+        if row is None:
+            row = await repository.upsert_config(guild_id)
+            await session.commit()
+    return WelcomeConfigRead.model_validate(row, from_attributes=True)
+
+
+@router.patch("/{guild_id}/welcome", response_model=WelcomeConfigRead)
+async def patch_welcome_config(
+    guild_id: int,
+    payload: WelcomeConfigUpdate,
+    request: Request,
+) -> WelcomeConfigRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = WelcomeRepository(session)
+        row = await repository.upsert_config(
+            guild_id,
+            channel_id=payload.channel_id,
+            enabled=payload.enabled,
+            message_template=payload.message_template,
+        )
+        await session.commit()
+    return WelcomeConfigRead.model_validate(row, from_attributes=True)
+
+
+@router.get("/{guild_id}/security", response_model=RaidProtectionConfigRead)
+async def get_security_config(guild_id: int, request: Request) -> RaidProtectionConfigRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = RaidProtectionRepository(session)
+        row = await repository.get_config(guild_id)
+        if row is None:
+            row = await repository.upsert_config(guild_id)
+            await session.commit()
+    return RaidProtectionConfigRead.model_validate(row, from_attributes=True)
+
+
+@router.patch("/{guild_id}/security", response_model=RaidProtectionConfigRead)
+async def patch_security_config(
+    guild_id: int,
+    payload: RaidProtectionConfigUpdate,
+    request: Request,
+) -> RaidProtectionConfigRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = RaidProtectionRepository(session)
+        row = await repository.upsert_config(
+            guild_id,
+            enabled=payload.enabled,
+            join_threshold=payload.join_threshold,
+            window_seconds=payload.window_seconds,
+            alert_channel_id=payload.alert_channel_id,
+        )
+        await session.commit()
+    return RaidProtectionConfigRead.model_validate(row, from_attributes=True)

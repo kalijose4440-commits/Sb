@@ -8,8 +8,10 @@ from bot.db.repositories import (
     AnalyticsRepository,
     AnnouncementRepository,
     AutoModRepository,
+    RaidProtectionRepository,
     ReactionRoleRepository,
     TicketRepository,
+    WelcomeRepository,
 )
 from bot.db.session import create_engine_and_sessionmaker, init_db
 
@@ -26,6 +28,8 @@ async def test_premium_repositories_round_trip(tmp_path) -> None:
         reaction_repo = ReactionRoleRepository(session)
         announcement_repo = AnnouncementRepository(session)
         analytics_repo = AnalyticsRepository(session)
+        welcome_repo = WelcomeRepository(session)
+        raid_repo = RaidProtectionRepository(session)
 
         rule = await automod.add_keyword(guild_id=1, keyword="spoiler", action="delete")
         assert rule.keyword == "spoiler"
@@ -55,6 +59,29 @@ async def test_premium_repositories_round_trip(tmp_path) -> None:
         )
         due = await announcement_repo.due_announcements(datetime.now(UTC) + timedelta(minutes=15))
         assert any(row.id == announcement.id for row in due)
+
+        welcome = await welcome_repo.upsert_config(
+            guild_id=1,
+            channel_id=321,
+            enabled=True,
+            message_template="Welcome {mention}!",
+        )
+        assert welcome.channel_id == 321
+        assert welcome.enabled is True
+
+        raid = await raid_repo.upsert_config(
+            guild_id=1,
+            enabled=True,
+            join_threshold=6,
+            window_seconds=20,
+            alert_channel_id=321,
+        )
+        assert raid.enabled is True
+        assert raid.join_threshold == 6
+        assert raid.window_seconds == 20
+
+        await raid_repo.mark_triggered(guild_id=1, triggered_at=datetime.now(UTC))
+        assert (await raid_repo.get_config(1)).last_triggered_at is not None
 
         await analytics_repo.record_usage(
             guild_id=1, channel_id=2, user_id=3, command_name="ticket open"

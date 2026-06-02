@@ -20,6 +20,8 @@ def test_default_cogs_include_premium_suite() -> None:
         "bot.cogs.admin",
         "bot.cogs.utility",
         "bot.cogs.moderation",
+        "bot.cogs.welcome",
+        "bot.cogs.security",
         "bot.cogs.tickets",
         "bot.cogs.automod",
         "bot.cogs.reaction_roles",

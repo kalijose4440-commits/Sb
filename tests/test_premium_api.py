@@ -10,7 +10,7 @@ from bot.db.session import create_engine_and_sessionmaker, init_db
 
 
 @pytest.mark.asyncio
-async def test_premium_api_automod_and_announcement_routes(tmp_path) -> None:
+async def test_premium_api_routes_cover_core_workflows(tmp_path) -> None:
     database_url = f"sqlite+aiosqlite:///{tmp_path / 'premium_api.db'}"
     engine, session_factory = create_engine_and_sessionmaker(database_url)
     await init_db(engine)
@@ -53,5 +53,28 @@ async def test_premium_api_automod_and_announcement_routes(tmp_path) -> None:
 
         remove_reaction = await client.delete("/api/v1/premium/42/reaction-roles/10/fire")
         assert remove_reaction.status_code == 204
+
+        get_welcome = await client.get("/api/v1/premium/42/welcome")
+        assert get_welcome.status_code == 200
+        assert get_welcome.json()["enabled"] is False
+
+        patch_welcome = await client.patch(
+            "/api/v1/premium/42/welcome",
+            json={"channel_id": 1234, "enabled": True, "message_template": "Welcome {mention}"},
+        )
+        assert patch_welcome.status_code == 200
+        assert patch_welcome.json()["enabled"] is True
+
+        get_security = await client.get("/api/v1/premium/42/security")
+        assert get_security.status_code == 200
+        assert get_security.json()["join_threshold"] == 8
+
+        patch_security = await client.patch(
+            "/api/v1/premium/42/security",
+            json={"enabled": True, "join_threshold": 6, "window_seconds": 25, "alert_channel_id": 1234},
+        )
+        assert patch_security.status_code == 200
+        assert patch_security.json()["enabled"] is True
+        assert patch_security.json()["join_threshold"] == 6
 
     await engine.dispose()

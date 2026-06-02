@@ -5,7 +5,7 @@ Production-grade Discord bot scaffold with:
 - **Disnake** slash commands and modular Cog architecture
 - **FastAPI** dashboard backend for real-time config
 - **PostgreSQL + async SQLAlchemy** persistence
-- **Premium automation modules** (tickets, automod, reaction roles, announcements, analytics)
+- **Premium automation modules** (welcome, security, tickets, automod, reaction roles, announcements, analytics)
 - **Rich rotating presence** with dynamic placeholders
 - **Docker** deployment support
 - **Structured logging, type hints, lint/type/test workflow**
@@ -19,7 +19,7 @@ make test
 make run
 ```
 
-You said you will provide the Discord token later; until then keep `DISCORD_TOKEN` as a placeholder.
+You can keep `DISCORD_TOKEN` as a placeholder until you are ready to launch.
 
 ## Feature Modules
 
@@ -40,6 +40,20 @@ You said you will provide the Discord token later; until then keep `DISCORD_TOKE
 - `/kick`
 - `/ban`
 - `/unban`
+
+### Premium: Welcome
+- `/welcome status`
+- `/welcome setchannel`
+- `/welcome message`
+- `/welcome enable`
+- `/welcome disable`
+- `/welcome preview`
+
+### Premium: Security
+- `/security status`
+- `/security configure`
+- `/security enable`
+- `/security disable`
 
 ### Premium: Tickets
 - `/ticket open`
@@ -101,6 +115,8 @@ watching::{users} members::idle
 - `GET/POST/PATCH /api/v1/premium/{guild_id}/announcements`
 - `GET/POST/DELETE /api/v1/premium/{guild_id}/reaction-roles`
 - `GET /api/v1/premium/{guild_id}/tickets/open`
+- `GET/PATCH /api/v1/premium/{guild_id}/welcome`
+- `GET/PATCH /api/v1/premium/{guild_id}/security`
 
 ## Quality Workflow
 

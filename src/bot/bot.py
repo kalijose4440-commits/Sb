@@ -31,6 +31,9 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
     intents.guilds = True
     intents.members = True
     intents.moderation = True
+    intents.messages = True
+    intents.message_content = True
+    intents.reactions = True
 
     bot = DashboardBot(intents=intents)
     bot.bridge = bridge
@@ -40,7 +43,6 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
 
     @bot.event
     async def on_ready() -> None:
-        await bot.change_presence(activity=disnake.Game(name=bot.settings.bot_activity))
         bot.logger.info(
             "discord_bot_ready",
             extra={"bot_user": str(bot.user), "guild_count": len(bot.guilds)},

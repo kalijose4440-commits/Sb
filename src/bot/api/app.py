@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from bot.api.routes.premium import router as premium_router
 from bot.api.routes.settings import router as settings_router
 from bot.bridge.state import BridgeState
 from bot.core.config import Settings
@@ -26,4 +27,5 @@ def create_api(
         return {"status": "ok"}
 
     app.include_router(settings_router)
+    app.include_router(premium_router)
     return app

@@ -1,100 +1,118 @@
-# Sb - Disnake + FastAPI + PostgreSQL Bot
+# Sb - Premium Disnake + FastAPI + PostgreSQL Bot
 
-Production-oriented Discord bot scaffold with:
+Production-grade Discord bot scaffold with:
 
-- **Disnake** for slash-command based bot interactions
-- **FastAPI** dashboard backend for real-time settings management
+- **Disnake** slash commands and modular Cog architecture
+- **FastAPI** dashboard backend for real-time config
 - **PostgreSQL + async SQLAlchemy** persistence
+- **Premium automation modules** (tickets, automod, reaction roles, announcements, analytics)
+- **Rich rotating presence** with dynamic placeholders
 - **Docker** deployment support
-- **Structured JSON logging**, type hints, and async-first architecture
+- **Structured logging, type hints, lint/type/test workflow**
 
-## Project Layout
-
-```text
-src/bot/
-  api/         # FastAPI app, routes, schemas
-  bridge/      # Real-time runtime bridge state
-  cogs/        # Modular command cogs
-  core/        # Config, logging, lifecycle helpers
-  db/          # SQLAlchemy base/models/repositories/session
-  bot.py       # Main entrypoint
-```
-
-## Quick Start (Cloud/Local)
-
-1. Copy env file:
+## Quick Start
 
 ```bash
 cp .env.example .env
-```
-
-2. Install dependencies (including dev tooling):
-
-```bash
 make setup-dev
-```
-
-3. Run tests:
-
-```bash
 make test
-```
-
-4. Run bot + API service:
-
-```bash
 make run
 ```
 
-## Environment Variables
+You said you will provide the Discord token later; until then keep `DISCORD_TOKEN` as a placeholder.
 
-See `.env.example`.
+## Feature Modules
 
-Important values:
-
-- `DISCORD_TOKEN`
-- `DATABASE_URL`
-- `API_HOST`, `API_PORT`
-- `DEFAULT_PREFIX`, `DEFAULT_STATUS`
-- `BOT_ACTIVITY`
-
-## Command Suite
-
-### Admin / Settings
-
-- `/settings` - View current guild settings
-- `/setprefix <prefix>` - Update guild prefix (Manage Server)
-- `/setstatus <status>` - Update guild status label (Manage Server)
+### Core / Admin
+- `/settings`
+- `/setprefix`
+- `/setstatus`
 
 ### Utility
-
-- `/ping` - Heartbeat latency
-- `/botinfo` - Runtime stats and uptime
-- `/serverinfo` - Guild summary
-- `/userinfo [member]` - Member profile details
-- `/runtime` - Current bridge runtime snapshot
+- `/ping`
+- `/botinfo`
+- `/serverinfo`
+- `/userinfo`
+- `/runtime`
 
 ### Moderation
+- `/purge`
+- `/kick`
+- `/ban`
+- `/unban`
 
-- `/purge <amount>` - Bulk-delete up to 100 messages (Manage Messages)
-- `/kick <member> [reason]` - Kick member (Kick Members)
-- `/ban <member> [reason]` - Ban member (Ban Members)
-- `/unban <user_id> [reason]` - Unban by user id (Ban Members)
+### Premium: Tickets
+- `/ticket open`
+- `/ticket close`
+- `/ticket add`
+- `/ticket remove`
+- `/ticket list`
 
-## Quality Tooling
+### Premium: Automod
+- `/automod add`
+- `/automod remove`
+- `/automod toggle`
+- `/automod list`
 
-- Lint: `make lint`
-- Format: `make format`
-- Type check: `make typecheck`
-- Full checks: `make check`
+### Premium: Reaction Roles
+- `/reactionrole bind`
+- `/reactionrole unbind`
+- `/reactionrole list`
+
+### Premium: Announcements
+- `/announce create`
+- `/announce toggle`
+- `/announce list`
+- `/announce runnow`
+
+### Premium: Analytics
+- `/analytics topcommands`
+- `/analytics topusers`
+
+## Rich Presence
+
+Configured via `PRESENCE_TEMPLATES` and `PRESENCE_ROTATION_SECONDS`.
+
+Template format:
+
+```text
+activity::text::status
+```
+
+- `activity`: `playing`, `watching`, `listening`, `competing`
+- `status`: `online`, `idle`, `dnd`, `invisible`
+- placeholders in `text`: `{guilds}`, `{users}`, `{uptime}`
+
+Example:
+
+```text
+watching::{users} members::idle
+```
+
+## API Endpoints
+
+### Base settings
+- `GET /api/v1/settings/{guild_id}`
+- `PATCH /api/v1/settings/{guild_id}`
+- `DELETE /api/v1/settings/{guild_id}`
+
+### Premium controls
+- `GET/POST/DELETE /api/v1/premium/{guild_id}/automod/keywords`
+- `GET/POST/PATCH /api/v1/premium/{guild_id}/announcements`
+- `GET/POST/DELETE /api/v1/premium/{guild_id}/reaction-roles`
+- `GET /api/v1/premium/{guild_id}/tickets/open`
+
+## Quality Workflow
+
+```bash
+make lint
+make typecheck
+make test
+make check
+```
 
 ## Docker
 
 ```bash
 docker compose -f docker/docker-compose.yml up --build
 ```
-
-This launches:
-
-- bot/API container
-- PostgreSQL 16 container

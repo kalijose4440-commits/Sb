@@ -13,9 +13,18 @@ def test_format_uptime_includes_expected_units() -> None:
     assert format_uptime(started, now=now) == "1d 3h 4m 5s"
 
 
-def test_default_cogs_include_admin_utility_and_moderation() -> None:
+def test_default_cogs_include_premium_suite() -> None:
     settings = Settings(discord_token="token", database_url="sqlite+aiosqlite:///tmp/test.db")
 
-    assert "bot.cogs.admin" in settings.cog_extensions
-    assert "bot.cogs.utility" in settings.cog_extensions
-    assert "bot.cogs.moderation" in settings.cog_extensions
+    expected = {
+        "bot.cogs.admin",
+        "bot.cogs.utility",
+        "bot.cogs.moderation",
+        "bot.cogs.tickets",
+        "bot.cogs.automod",
+        "bot.cogs.reaction_roles",
+        "bot.cogs.announcements",
+        "bot.cogs.analytics",
+        "bot.cogs.presence",
+    }
+    assert expected.issubset(set(settings.cog_extensions))

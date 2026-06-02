@@ -25,7 +25,9 @@ class WelcomeCog(BaseCog):
     @commands.default_member_permissions(manage_guild=True)
     async def status(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -55,7 +57,9 @@ class WelcomeCog(BaseCog):
         channel: disnake.TextChannel,
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -76,7 +80,9 @@ class WelcomeCog(BaseCog):
         template: str = commands.Param(min_length=1, max_length=1800),
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -93,7 +99,9 @@ class WelcomeCog(BaseCog):
     @commands.default_member_permissions(manage_guild=True)
     async def enable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -114,7 +122,9 @@ class WelcomeCog(BaseCog):
     @commands.default_member_permissions(manage_guild=True)
     async def disable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -132,12 +142,16 @@ class WelcomeCog(BaseCog):
         member: disnake.Member | None = None,
     ) -> None:
         if interaction.guild is None or interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         target = member or interaction.author
         if not isinstance(target, disnake.Member):
-            await interaction.response.send_message("Could not resolve a guild member for preview.", ephemeral=True)
+            await interaction.response.send_message(
+                "Could not resolve a guild member for preview.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:

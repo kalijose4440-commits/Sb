@@ -32,7 +32,9 @@ class SecurityCog(BaseCog):
     @commands.default_member_permissions(manage_guild=True)
     async def status(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -70,7 +72,9 @@ class SecurityCog(BaseCog):
         alert_channel: disnake.TextChannel | None = None,
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         alert_channel_id = alert_channel.id if alert_channel is not None else None
@@ -93,7 +97,9 @@ class SecurityCog(BaseCog):
     @commands.default_member_permissions(manage_guild=True)
     async def enable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -107,7 +113,9 @@ class SecurityCog(BaseCog):
     @commands.default_member_permissions(manage_guild=True)
     async def disable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:

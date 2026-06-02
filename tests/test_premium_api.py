@@ -71,7 +71,12 @@ async def test_premium_api_routes_cover_core_workflows(tmp_path) -> None:
 
         patch_security = await client.patch(
             "/api/v1/premium/42/security",
-            json={"enabled": True, "join_threshold": 6, "window_seconds": 25, "alert_channel_id": 1234},
+            json={
+                "enabled": True,
+                "join_threshold": 6,
+                "window_seconds": 25,
+                "alert_channel_id": 1234,
+            },
         )
         assert patch_security.status_code == 200
         assert patch_security.json()["enabled"] is True

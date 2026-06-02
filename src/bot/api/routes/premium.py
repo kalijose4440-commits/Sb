@@ -179,7 +179,9 @@ async def get_welcome_config(guild_id: int, request: Request) -> WelcomeConfigRe
         if row is None:
             row = await repository.upsert_config(guild_id)
             await session.commit()
-    return WelcomeConfigRead.model_validate(row, from_attributes=True)
+        await session.refresh(row)
+        response = WelcomeConfigRead.model_validate(row, from_attributes=True)
+    return response
 
 
 @router.patch("/{guild_id}/welcome", response_model=WelcomeConfigRead)
@@ -198,7 +200,9 @@ async def patch_welcome_config(
             message_template=payload.message_template,
         )
         await session.commit()
-    return WelcomeConfigRead.model_validate(row, from_attributes=True)
+        await session.refresh(row)
+        response = WelcomeConfigRead.model_validate(row, from_attributes=True)
+    return response
 
 
 @router.get("/{guild_id}/security", response_model=RaidProtectionConfigRead)
@@ -210,7 +214,9 @@ async def get_security_config(guild_id: int, request: Request) -> RaidProtection
         if row is None:
             row = await repository.upsert_config(guild_id)
             await session.commit()
-    return RaidProtectionConfigRead.model_validate(row, from_attributes=True)
+        await session.refresh(row)
+        response = RaidProtectionConfigRead.model_validate(row, from_attributes=True)
+    return response
 
 
 @router.patch("/{guild_id}/security", response_model=RaidProtectionConfigRead)
@@ -230,4 +236,6 @@ async def patch_security_config(
             alert_channel_id=payload.alert_channel_id,
         )
         await session.commit()
-    return RaidProtectionConfigRead.model_validate(row, from_attributes=True)
+        await session.refresh(row)
+        response = RaidProtectionConfigRead.model_validate(row, from_attributes=True)
+    return response

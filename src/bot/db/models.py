@@ -162,7 +162,9 @@ class RaidProtectionConfig(Base):
     join_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
     window_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     alert_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_triggered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

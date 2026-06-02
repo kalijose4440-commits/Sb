@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from bot.db.base import Base
 
 
-def create_engine_and_sessionmaker(database_url: str) -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
+def create_engine_and_sessionmaker(
+    database_url: str,
+) -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
     """Create the async engine and session factory for application use."""
 
     engine = create_async_engine(database_url, pool_pre_ping=True)

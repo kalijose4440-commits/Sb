@@ -82,7 +82,9 @@ class BridgeState:
         async with self._lock:
             self._listeners.discard(queue)
 
-    async def _update_and_publish(self, *, guild_id: int, field: Literal["prefix", "status"], value: str) -> None:
+    async def _update_and_publish(
+        self, *, guild_id: int, field: Literal["prefix", "status"], value: str
+    ) -> None:
         async with self._lock:
             current = self._cache.get(guild_id)
             if current is None:

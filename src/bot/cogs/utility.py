@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any, cast
 
 import disnake
 from disnake.ext import commands
+from disnake.interactions.application_command import ApplicationCommandInteraction
 
 from bot.cogs.base_cog import BaseCog
 
@@ -32,15 +34,16 @@ class UtilityCog(BaseCog):
     """High-value informational commands for daily server operations."""
 
     @commands.slash_command(name="ping", description="Show bot latency and API heartbeat")
-    async def ping(self, interaction: disnake.ApplicationCommandInteraction) -> None:
+    async def ping(self, interaction: ApplicationCommandInteraction) -> None:
         latency_ms = round(self.bot.latency * 1000)
         await interaction.response.send_message(f"Pong! `{latency_ms}ms`", ephemeral=True)
 
     @commands.slash_command(name="botinfo", description="Show runtime information about this bot")
-    async def botinfo(self, interaction: disnake.ApplicationCommandInteraction) -> None:
+    async def botinfo(self, interaction: ApplicationCommandInteraction) -> None:
         guilds = len(self.bot.guilds)
         members = sum(guild.member_count or 0 for guild in self.bot.guilds)
-        uptime = format_uptime(self.bot.started_at)
+        started_at = getattr(self.bot, "started_at", datetime.now(UTC))
+        uptime = format_uptime(started_at)
 
         embed = disnake.Embed(title="Bot Information", color=disnake.Color.blurple())
         embed.add_field(name="Guilds", value=str(guilds), inline=True)
@@ -49,16 +52,23 @@ class UtilityCog(BaseCog):
         embed.add_field(name="Uptime", value=uptime, inline=False)
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @commands.slash_command(name="serverinfo", description="Display summary information for this server")
-    async def serverinfo(self, interaction: disnake.ApplicationCommandInteraction) -> None:
+    @commands.slash_command(
+        name="serverinfo",
+        description="Display summary information for this server",
+    )
+    async def serverinfo(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.",
+                ephemeral=True,
+            )
             return
 
         guild = interaction.guild
         created = disnake.utils.format_dt(guild.created_at, style="R")
         embed = disnake.Embed(title=f"{guild.name}", color=disnake.Color.green())
-        embed.add_field(name="Owner", value=guild.owner.mention if guild.owner else "Unknown", inline=True)
+        owner_mention = guild.owner.mention if guild.owner else "Unknown"
+        embed.add_field(name="Owner", value=owner_mention, inline=True)
         embed.add_field(name="Members", value=str(guild.member_count or 0), inline=True)
         embed.add_field(name="Channels", value=str(len(guild.channels)), inline=True)
         embed.add_field(name="Created", value=created, inline=False)
@@ -71,15 +81,30 @@ class UtilityCog(BaseCog):
     @commands.slash_command(name="userinfo", description="Show profile details for a server member")
     async def userinfo(
         self,
-        interaction: disnake.ApplicationCommandInteraction,
+        interaction: ApplicationCommandInteraction,
         member: disnake.Member | None = None,
     ) -> None:
         if interaction.guild is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.",
+                ephemeral=True,
+            )
             return
 
-        target = member or interaction.author
-        joined = disnake.utils.format_dt(target.joined_at, style="R") if target.joined_at else "Unknown"
+        if member is not None:
+            target = member
+        elif isinstance(interaction.author, disnake.Member):
+            target = interaction.author
+        else:
+            await interaction.response.send_message(
+                "Could not resolve a server member for this command.",
+                ephemeral=True,
+            )
+            return
+
+        joined = (
+            disnake.utils.format_dt(target.joined_at, style="R") if target.joined_at else "Unknown"
+        )
         created = disnake.utils.format_dt(target.created_at, style="R")
 
         embed = disnake.Embed(title=f"User: {target}", color=disnake.Color.orange())
@@ -91,10 +116,16 @@ class UtilityCog(BaseCog):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @commands.slash_command(name="runtime", description="Show real-time runtime settings snapshot for this guild")
-    async def runtime(self, interaction: disnake.ApplicationCommandInteraction) -> None:
+    @commands.slash_command(
+        name="runtime",
+        description="Show real-time runtime settings snapshot for this guild",
+    )
+    async def runtime(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.",
+                ephemeral=True,
+            )
             return
 
         snapshot = await self.get_runtime_snapshot(interaction.guild_id)
@@ -105,4 +136,5 @@ class UtilityCog(BaseCog):
 
 
 def setup(bot: commands.InteractionBot) -> None:
-    bot.add_cog(UtilityCog(bot=bot, session_factory=bot.bridge.session_factory))
+    bridge = cast(Any, bot).bridge
+    bot.add_cog(UtilityCog(bot=bot, session_factory=bridge.session_factory))

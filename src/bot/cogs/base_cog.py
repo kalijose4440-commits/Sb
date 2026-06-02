@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from typing import cast
 
 from disnake.ext import commands
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.api.schemas import GuildSettingsRead
 from bot.bridge.state import BridgeState, GuildSettingsSnapshot
@@ -12,13 +13,20 @@ from bot.db.repositories import GuildSettingsRepository
 class BaseCog(commands.Cog):
     """Base Cog template showing DB persistence and API bridge interaction."""
 
-    def __init__(self, bot: commands.InteractionBot, session_factory: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        bot: commands.InteractionBot,
+        session_factory: async_sessionmaker[AsyncSession],
+    ) -> None:
         self.bot = bot
         self._session_factory = session_factory
 
     @property
     def bridge(self) -> BridgeState:
-        return self.bot.bridge  # type: ignore[no-any-return]
+        bridge = getattr(self.bot, "bridge", None)
+        if bridge is None:
+            raise RuntimeError("BridgeState is not attached to this bot instance")
+        return cast(BridgeState, bridge)
 
     async def get_guild_settings(self, guild_id: int) -> GuildSettingsRead:
         """Read settings from PostgreSQL and return an API-friendly schema."""

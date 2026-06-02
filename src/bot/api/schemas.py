@@ -19,7 +19,7 @@ class GuildSettingsUpdate(BaseModel):
     status: str | None = Field(default=None, min_length=1, max_length=64)
 
     @model_validator(mode="after")
-    def require_change(self) -> "GuildSettingsUpdate":
+    def require_change(self) -> GuildSettingsUpdate:
         if self.prefix is None and self.status is None:
             raise ValueError("at least one setting field must be provided")
         return self

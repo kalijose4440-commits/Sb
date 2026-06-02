@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -11,11 +13,13 @@ router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
 
 def _bridge_from_request(request: Request) -> BridgeState:
-    return request.app.state.bridge  # type: ignore[no-any-return]
+    return cast(BridgeState, request.app.state.bridge)
 
 
-def _session_factory_from_request(request: Request) -> async_sessionmaker[AsyncSession]:
-    return request.app.state.session_factory  # type: ignore[no-any-return]
+def _session_factory_from_request(
+    request: Request,
+) -> async_sessionmaker[AsyncSession]:
+    return cast(async_sessionmaker[AsyncSession], request.app.state.session_factory)
 
 
 @router.get("/{guild_id}", response_model=GuildSettingsRead)
@@ -40,7 +44,11 @@ async def get_guild_settings(guild_id: int, request: Request) -> GuildSettingsRe
 
 
 @router.patch("/{guild_id}", response_model=GuildSettingsRead)
-async def patch_guild_settings(guild_id: int, payload: GuildSettingsUpdate, request: Request) -> GuildSettingsRead:
+async def patch_guild_settings(
+    guild_id: int,
+    payload: GuildSettingsUpdate,
+    request: Request,
+) -> GuildSettingsRead:
     bridge = _bridge_from_request(request)
     session_factory = _session_factory_from_request(request)
 

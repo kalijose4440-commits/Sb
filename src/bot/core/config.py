@@ -8,7 +8,9 @@ class Settings(BaseSettings):
     """Centralized runtime configuration loaded from environment variables."""
 
     discord_token: str = Field(default="replace-with-token")
-    database_url: str = Field(default="postgresql+asyncpg://bot_user:bot_password@localhost:5432/bot_db")
+    database_url: str = Field(
+        default="postgresql+asyncpg://bot_user:bot_password@localhost:5432/bot_db"
+    )
     api_host: str = Field(default="0.0.0.0")
     api_port: int = Field(default=8000, ge=1, le=65535)
     log_level: str = Field(default="INFO")

@@ -43,8 +43,12 @@ class GuildSettingsRepository:
         await self._session.flush()
         return row
 
-    async def upsert_prefix(self, guild_id: int, prefix: str, *, default_status: str = "online") -> GuildSettings:
+    async def upsert_prefix(
+        self, guild_id: int, prefix: str, *, default_status: str = "online"
+    ) -> GuildSettings:
         return await self.upsert(guild_id, prefix=prefix, default_status=default_status)
 
-    async def upsert_status(self, guild_id: int, status: str, *, default_prefix: str = "!") -> GuildSettings:
+    async def upsert_status(
+        self, guild_id: int, status: str, *, default_prefix: str = "!"
+    ) -> GuildSettings:
         return await self.upsert(guild_id, status=status, default_prefix=default_prefix)

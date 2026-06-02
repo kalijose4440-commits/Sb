@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC, datetime
 
 import disnake
 import uvicorn
@@ -22,20 +23,24 @@ class DashboardBot(commands.InteractionBot):
     bridge: BridgeState
     settings: Settings
     logger: logging.Logger
+    started_at: datetime
 
 
 def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
     intents = disnake.Intents.default()
     intents.guilds = True
     intents.members = True
+    intents.moderation = True
 
     bot = DashboardBot(intents=intents)
     bot.bridge = bridge
     bot.settings = settings
     bot.logger = logging.getLogger("bot.discord")
+    bot.started_at = datetime.now(UTC)
 
     @bot.event
     async def on_ready() -> None:
+        await bot.change_presence(activity=disnake.Game(name=bot.settings.bot_activity))
         bot.logger.info(
             "discord_bot_ready",
             extra={"bot_user": str(bot.user), "guild_count": len(bot.guilds)},
@@ -91,5 +96,11 @@ async def main() -> None:
         await _shutdown(bot, engine)
 
 
-if __name__ == "__main__":
+def run() -> None:
+    """Console script entrypoint for local and cloud runners."""
+
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    run()

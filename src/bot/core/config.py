@@ -14,7 +14,12 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
     default_prefix: str = Field(default="!", min_length=1, max_length=16)
     default_status: str = Field(default="online", min_length=1, max_length=64)
-    cog_extensions: tuple[str, ...] = ("bot.cogs.admin",)
+    bot_activity: str = Field(default="Serving your community")
+    cog_extensions: tuple[str, ...] = (
+        "bot.cogs.admin",
+        "bot.cogs.utility",
+        "bot.cogs.moderation",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

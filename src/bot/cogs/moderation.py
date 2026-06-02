@@ -15,7 +15,7 @@ class ModerationCog(commands.Cog):
         name="purge",
         description="Delete a batch of recent messages from this channel",
     )
-    @commands.default_member_permissions(manage_messages=True)
+    @commands.has_permissions(manage_messages=True)
     @commands.bot_has_permissions(manage_messages=True)
     async def purge(
         self,
@@ -34,7 +34,7 @@ class ModerationCog(commands.Cog):
         await interaction.edit_original_response(content=f"Deleted `{len(deleted)}` messages.")
 
     @commands.slash_command(name="kick", description="Kick a member from the server")
-    @commands.default_member_permissions(kick_members=True)
+    @commands.has_permissions(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     async def kick(
         self,
@@ -61,7 +61,7 @@ class ModerationCog(commands.Cog):
         await interaction.response.send_message(f"Kicked {member.mention}.", ephemeral=True)
 
     @commands.slash_command(name="ban", description="Ban a member from the server")
-    @commands.default_member_permissions(ban_members=True)
+    @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def ban(
         self,
@@ -88,7 +88,7 @@ class ModerationCog(commands.Cog):
         await interaction.response.send_message(f"Banned {member.mention}.", ephemeral=True)
 
     @commands.slash_command(name="unban", description="Unban a user by their user ID")
-    @commands.default_member_permissions(ban_members=True)
+    @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def unban(
         self,

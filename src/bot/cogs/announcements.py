@@ -36,7 +36,7 @@ class AnnouncementCog(BaseCog):
         )
 
     @announce.sub_command(name="create", description="Create a repeating announcement")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def create(
         self,
         interaction: ApplicationCommandInteraction,
@@ -70,7 +70,7 @@ class AnnouncementCog(BaseCog):
         )
 
     @announce.sub_command(name="toggle", description="Enable or disable an announcement")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def toggle(
         self,
         interaction: ApplicationCommandInteraction,
@@ -99,7 +99,7 @@ class AnnouncementCog(BaseCog):
         )
 
     @announce.sub_command(name="list", description="List recurring announcements")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def list_announcements(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
@@ -127,7 +127,7 @@ class AnnouncementCog(BaseCog):
         await interaction.response.send_message("\n".join(lines), ephemeral=True)
 
     @announce.sub_command(name="runnow", description="Trigger an announcement immediately")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def run_now(
         self, interaction: ApplicationCommandInteraction, announcement_id: int
     ) -> None:

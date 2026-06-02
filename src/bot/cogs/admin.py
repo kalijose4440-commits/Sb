@@ -27,7 +27,7 @@ class AdminCog(BaseCog):
         )
 
     @commands.slash_command(name="setprefix", description="Update command prefix for this guild")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def setprefix(
         self,
         interaction: ApplicationCommandInteraction,
@@ -47,7 +47,7 @@ class AdminCog(BaseCog):
         )
 
     @commands.slash_command(name="setstatus", description="Update status label for this guild")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def setstatus(
         self,
         interaction: ApplicationCommandInteraction,

@@ -22,7 +22,7 @@ class WelcomeCog(BaseCog):
         )
 
     @welcome.sub_command(name="status", description="Show current welcome configuration")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def status(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
@@ -50,7 +50,7 @@ class WelcomeCog(BaseCog):
         )
 
     @welcome.sub_command(name="setchannel", description="Set the channel used for welcome messages")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def set_channel(
         self,
         interaction: ApplicationCommandInteraction,
@@ -73,7 +73,7 @@ class WelcomeCog(BaseCog):
         )
 
     @welcome.sub_command(name="message", description="Set the welcome message template")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def set_message(
         self,
         interaction: ApplicationCommandInteraction,
@@ -96,7 +96,7 @@ class WelcomeCog(BaseCog):
         )
 
     @welcome.sub_command(name="enable", description="Enable welcome onboarding messages")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def enable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
@@ -119,7 +119,7 @@ class WelcomeCog(BaseCog):
         await interaction.response.send_message("Welcome messages enabled.", ephemeral=True)
 
     @welcome.sub_command(name="disable", description="Disable welcome onboarding messages")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def disable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
@@ -135,7 +135,7 @@ class WelcomeCog(BaseCog):
         await interaction.response.send_message("Welcome messages disabled.", ephemeral=True)
 
     @welcome.sub_command(name="preview", description="Preview the rendered welcome message")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def preview(
         self,
         interaction: ApplicationCommandInteraction,

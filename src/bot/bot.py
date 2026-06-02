@@ -29,10 +29,10 @@ class DashboardBot(commands.InteractionBot):
 def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
     intents = disnake.Intents.default()
     intents.guilds = True
-    intents.members = True
+    intents.members = settings.enable_members_intent
     intents.moderation = True
     intents.messages = True
-    intents.message_content = True
+    intents.message_content = settings.enable_message_content_intent
     intents.reactions = True
 
     bot = DashboardBot(intents=intents)

@@ -36,7 +36,7 @@ class AnalyticsCog(BaseCog):
         )
 
     @analytics.sub_command(name="topcommands", description="Show most-used commands")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def top_commands(
         self,
         interaction: ApplicationCommandInteraction,
@@ -62,7 +62,7 @@ class AnalyticsCog(BaseCog):
         await interaction.response.send_message("\n".join(lines), ephemeral=True)
 
     @analytics.sub_command(name="topusers", description="Show top command users")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def top_users(
         self,
         interaction: ApplicationCommandInteraction,

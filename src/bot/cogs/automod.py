@@ -21,7 +21,7 @@ class AutoModCog(BaseCog):
         )
 
     @automod.sub_command(name="add", description="Add or update an automod keyword")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def add_keyword(
         self,
         interaction: ApplicationCommandInteraction,
@@ -45,7 +45,7 @@ class AutoModCog(BaseCog):
         )
 
     @automod.sub_command(name="remove", description="Remove an automod keyword")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def remove_keyword(
         self,
         interaction: ApplicationCommandInteraction,
@@ -71,7 +71,7 @@ class AutoModCog(BaseCog):
         )
 
     @automod.sub_command(name="toggle", description="Enable or disable a keyword rule by ID")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def toggle_keyword(
         self,
         interaction: ApplicationCommandInteraction,
@@ -93,7 +93,7 @@ class AutoModCog(BaseCog):
         )
 
     @automod.sub_command(name="list", description="List automod keywords for this guild")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def list_keywords(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(

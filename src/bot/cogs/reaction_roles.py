@@ -21,7 +21,7 @@ class ReactionRoleCog(BaseCog):
         )
 
     @reactionrole.sub_command(name="bind", description="Bind an emoji reaction to a role")
-    @commands.default_member_permissions(manage_roles=True)
+    @commands.has_permissions(manage_roles=True)
     @commands.bot_has_permissions(manage_roles=True)
     async def bind(
         self,
@@ -62,7 +62,7 @@ class ReactionRoleCog(BaseCog):
         )
 
     @reactionrole.sub_command(name="unbind", description="Remove a reaction role binding")
-    @commands.default_member_permissions(manage_roles=True)
+    @commands.has_permissions(manage_roles=True)
     async def unbind(
         self,
         interaction: ApplicationCommandInteraction,
@@ -81,7 +81,7 @@ class ReactionRoleCog(BaseCog):
         await interaction.response.send_message("Reaction role binding removed.", ephemeral=True)
 
     @reactionrole.sub_command(name="list", description="List guild reaction role bindings")
-    @commands.default_member_permissions(manage_roles=True)
+    @commands.has_permissions(manage_roles=True)
     async def list_bindings(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(

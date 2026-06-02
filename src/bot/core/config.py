@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     default_status: str = Field(default="online", min_length=1, max_length=64)
     bot_activity: str = Field(default="Serving your community")
 
+    enable_members_intent: bool = Field(default=False)
+    enable_message_content_intent: bool = Field(default=False)
+
     announcement_poll_seconds: int = Field(default=30, ge=5, le=3600)
     presence_rotation_seconds: int = Field(default=120, ge=20, le=3600)
     presence_templates: tuple[str, ...] = (

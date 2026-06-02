@@ -185,7 +185,7 @@ class TicketCog(BaseCog):
         await interaction.edit_original_response(content="Ticket closed.")
 
     @ticket.sub_command(name="escalate", description="Escalate a ticket to a higher priority")
-    @commands.default_member_permissions(manage_channels=True)
+    @commands.has_permissions(manage_channels=True)
     async def escalate(
         self,
         interaction: ApplicationCommandInteraction,
@@ -289,7 +289,7 @@ class TicketCog(BaseCog):
         )
 
     @ticket.sub_command(name="add", description="Grant ticket access to a member")
-    @commands.default_member_permissions(manage_channels=True)
+    @commands.has_permissions(manage_channels=True)
     async def add_member(
         self,
         interaction: ApplicationCommandInteraction,
@@ -321,7 +321,7 @@ class TicketCog(BaseCog):
         )
 
     @ticket.sub_command(name="remove", description="Revoke ticket access from a member")
-    @commands.default_member_permissions(manage_channels=True)
+    @commands.has_permissions(manage_channels=True)
     async def remove_member(
         self,
         interaction: ApplicationCommandInteraction,
@@ -353,7 +353,7 @@ class TicketCog(BaseCog):
         )
 
     @ticket.sub_command(name="list", description="List currently open tickets")
-    @commands.default_member_permissions(manage_channels=True)
+    @commands.has_permissions(manage_channels=True)
     async def list_tickets(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(

@@ -41,7 +41,7 @@ class AclCog(BaseCog):
         )
 
     @acl.sub_command(name="allow", description="Allow a role to use a slash command")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def allow(
         self,
         interaction: ApplicationCommandInteraction,
@@ -78,7 +78,7 @@ class AclCog(BaseCog):
         )
 
     @acl.sub_command(name="revoke", description="Revoke a role's ACL allow-list entry")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def revoke(
         self,
         interaction: ApplicationCommandInteraction,
@@ -122,7 +122,7 @@ class AclCog(BaseCog):
         )
 
     @acl.sub_command(name="list", description="List ACL rules for this guild")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def list_rules(
         self,
         interaction: ApplicationCommandInteraction,

@@ -38,7 +38,7 @@ class SecurityCog(BaseCog):
         )
 
     @security.sub_command(name="status", description="Show raid protection settings")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def status(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
@@ -82,7 +82,7 @@ class SecurityCog(BaseCog):
     @security.sub_command(
         name="configure", description="Configure raid burst detection and mitigation"
     )
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def configure(
         self,
         interaction: ApplicationCommandInteraction,
@@ -122,7 +122,7 @@ class SecurityCog(BaseCog):
         )
 
     @security.sub_command(name="enable", description="Enable raid detection alerts")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def enable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
@@ -139,7 +139,7 @@ class SecurityCog(BaseCog):
         await interaction.response.send_message("Raid detection enabled.", ephemeral=True)
 
     @security.sub_command(name="disable", description="Disable raid detection alerts")
-    @commands.default_member_permissions(manage_guild=True)
+    @commands.has_permissions(manage_guild=True)
     async def disable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(

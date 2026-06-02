@@ -56,8 +56,12 @@ async def test_premium_repositories_round_trip(tmp_path) -> None:
         due = await announcement_repo.due_announcements(datetime.now(UTC) + timedelta(minutes=15))
         assert any(row.id == announcement.id for row in due)
 
-        await analytics_repo.record_usage(guild_id=1, channel_id=2, user_id=3, command_name="ticket open")
-        await analytics_repo.record_usage(guild_id=1, channel_id=2, user_id=3, command_name="ticket open")
+        await analytics_repo.record_usage(
+            guild_id=1, channel_id=2, user_id=3, command_name="ticket open"
+        )
+        await analytics_repo.record_usage(
+            guild_id=1, channel_id=2, user_id=3, command_name="ticket open"
+        )
         await analytics_repo.record_usage(guild_id=1, channel_id=2, user_id=4, command_name="ping")
 
         top_commands = await analytics_repo.top_commands(guild_id=1, limit=5)

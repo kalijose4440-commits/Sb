@@ -70,7 +70,9 @@ class TicketCog(BaseCog):
                 manage_channels=True,
             )
 
-        safe_name = "".join(ch for ch in ticket_owner.display_name.lower() if ch.isalnum() or ch == "-")
+        safe_name = "".join(
+            ch for ch in ticket_owner.display_name.lower() if ch.isalnum() or ch == "-"
+        )
         channel = await guild.create_text_channel(
             name=f"ticket-{safe_name[:18] or ticket_owner.id}",
             category=category,
@@ -93,7 +95,9 @@ class TicketCog(BaseCog):
             f"**Subject:** {subject}\n"
             "A team member will assist you shortly.",
         )
-        await interaction.response.send_message(f"Ticket created: {channel.mention}", ephemeral=True)
+        await interaction.response.send_message(
+            f"Ticket created: {channel.mention}", ephemeral=True
+        )
 
     @ticket.sub_command(name="close", description="Close the current ticket channel")
     async def close_ticket(
@@ -163,12 +167,16 @@ class TicketCog(BaseCog):
             row = await repository.get_by_channel_id(interaction.channel.id)
 
         if row is None:
-            await interaction.response.send_message("This channel is not a tracked ticket.", ephemeral=True)
+            await interaction.response.send_message(
+                "This channel is not a tracked ticket.", ephemeral=True
+            )
             return
 
         channel = cast(disnake.TextChannel, interaction.channel)
         await channel.set_permissions(member, view_channel=True, send_messages=True)
-        await interaction.response.send_message(f"Added {member.mention} to this ticket.", ephemeral=True)
+        await interaction.response.send_message(
+            f"Added {member.mention} to this ticket.", ephemeral=True
+        )
 
     @ticket.sub_command(name="remove", description="Revoke ticket access from a member")
     @commands.default_member_permissions(manage_channels=True)
@@ -186,7 +194,9 @@ class TicketCog(BaseCog):
             row = await repository.get_by_channel_id(interaction.channel.id)
 
         if row is None:
-            await interaction.response.send_message("This channel is not a tracked ticket.", ephemeral=True)
+            await interaction.response.send_message(
+                "This channel is not a tracked ticket.", ephemeral=True
+            )
             return
 
         channel = cast(disnake.TextChannel, interaction.channel)

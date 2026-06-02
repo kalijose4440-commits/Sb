@@ -32,7 +32,9 @@ class ReactionRoleCog(BaseCog):
         role: disnake.Role,
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         try:
@@ -82,7 +84,9 @@ class ReactionRoleCog(BaseCog):
     @commands.default_member_permissions(manage_roles=True)
     async def list_bindings(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -90,7 +94,9 @@ class ReactionRoleCog(BaseCog):
             rows = await repository.list_bindings(interaction.guild_id)
 
         if not rows:
-            await interaction.response.send_message("No reaction role bindings configured.", ephemeral=True)
+            await interaction.response.send_message(
+                "No reaction role bindings configured.", ephemeral=True
+            )
             return
 
         lines = [

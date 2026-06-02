@@ -29,7 +29,9 @@ class AutoModCog(BaseCog):
         action: str = commands.Param(choices=["delete", "warn"], default="delete"),
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -50,7 +52,9 @@ class AutoModCog(BaseCog):
         keyword: str = commands.Param(min_length=1, max_length=120),
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -62,7 +66,9 @@ class AutoModCog(BaseCog):
             await interaction.response.send_message("Keyword not found.", ephemeral=True)
             return
 
-        await interaction.response.send_message(f"Removed automod keyword `{keyword}`.", ephemeral=True)
+        await interaction.response.send_message(
+            f"Removed automod keyword `{keyword}`.", ephemeral=True
+        )
 
     @automod.sub_command(name="toggle", description="Enable or disable a keyword rule by ID")
     @commands.default_member_permissions(manage_guild=True)
@@ -90,7 +96,9 @@ class AutoModCog(BaseCog):
     @commands.default_member_permissions(manage_guild=True)
     async def list_keywords(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -98,7 +106,9 @@ class AutoModCog(BaseCog):
             rows = await repository.list_keywords(interaction.guild_id)
 
         if not rows:
-            await interaction.response.send_message("No automod keywords configured.", ephemeral=True)
+            await interaction.response.send_message(
+                "No automod keywords configured.", ephemeral=True
+            )
             return
 
         lines = [

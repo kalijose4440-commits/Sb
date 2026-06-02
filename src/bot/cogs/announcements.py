@@ -62,7 +62,10 @@ class AnnouncementCog(BaseCog):
             await session.commit()
 
         await interaction.response.send_message(
-            f"Announcement `#{row.id}` created for {channel.mention} every `{interval_minutes}` min.",
+            (
+                f"Announcement `#{row.id}` created for {channel.mention} "
+                f"every `{interval_minutes}` min."
+            ),
             ephemeral=True,
         )
 
@@ -125,7 +128,9 @@ class AnnouncementCog(BaseCog):
 
     @announce.sub_command(name="runnow", description="Trigger an announcement immediately")
     @commands.default_member_permissions(manage_guild=True)
-    async def run_now(self, interaction: ApplicationCommandInteraction, announcement_id: int) -> None:
+    async def run_now(
+        self, interaction: ApplicationCommandInteraction, announcement_id: int
+    ) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
                 "This command can only be used in a server.",

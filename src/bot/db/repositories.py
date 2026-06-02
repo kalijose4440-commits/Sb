@@ -308,7 +308,9 @@ class AnnouncementRepository:
         result = await self._session.execute(statement)
         return list(result.scalars().all())
 
-    async def get_announcement(self, guild_id: int, announcement_id: int) -> ScheduledAnnouncement | None:
+    async def get_announcement(
+        self, guild_id: int, announcement_id: int
+    ) -> ScheduledAnnouncement | None:
         statement = select(ScheduledAnnouncement).where(
             ScheduledAnnouncement.guild_id == guild_id,
             ScheduledAnnouncement.id == announcement_id,

@@ -43,7 +43,9 @@ class AnalyticsCog(BaseCog):
         limit: int = commands.Param(default=10, ge=1, le=25),
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:
@@ -54,7 +56,9 @@ class AnalyticsCog(BaseCog):
             await interaction.response.send_message("No analytics data yet.", ephemeral=True)
             return
 
-        lines = [f"`{idx}.` `{name}` - **{uses}** uses" for idx, (name, uses) in enumerate(rows, start=1)]
+        lines = [
+            f"`{idx}.` `{name}` - **{uses}** uses" for idx, (name, uses) in enumerate(rows, start=1)
+        ]
         await interaction.response.send_message("\n".join(lines), ephemeral=True)
 
     @analytics.sub_command(name="topusers", description="Show top command users")
@@ -65,7 +69,9 @@ class AnalyticsCog(BaseCog):
         limit: int = commands.Param(default=10, ge=1, le=25),
     ) -> None:
         if interaction.guild_id is None:
-            await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
+            await interaction.response.send_message(
+                "This command can only be used in a server.", ephemeral=True
+            )
             return
 
         async with self._session_factory() as session:

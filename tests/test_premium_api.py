@@ -113,7 +113,9 @@ async def test_premium_api_routes_cover_core_workflows(tmp_path) -> None:
         assert add_acl.status_code == 200
         assert add_acl.json()["command_name"] == "ticket open"
 
-        list_acl = await client.get("/api/v1/premium/42/acl", params={"command_name": "ticket open"})
+        list_acl = await client.get(
+            "/api/v1/premium/42/acl", params={"command_name": "ticket open"}
+        )
         assert list_acl.status_code == 200
         assert len(list_acl.json()) == 1
 

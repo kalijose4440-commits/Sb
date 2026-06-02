@@ -201,7 +201,9 @@ async def escalate_ticket(
     return TicketRead.model_validate(row, from_attributes=True)
 
 
-@router.get("/{guild_id}/tickets/{ticket_id}/transcripts", response_model=list[TicketTranscriptRead])
+@router.get(
+    "/{guild_id}/tickets/{ticket_id}/transcripts", response_model=list[TicketTranscriptRead]
+)
 async def list_ticket_transcripts(
     guild_id: int,
     ticket_id: int,

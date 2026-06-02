@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any, cast
 
 import disnake
@@ -79,7 +79,9 @@ class SecurityCog(BaseCog):
             ephemeral=True,
         )
 
-    @security.sub_command(name="configure", description="Configure raid burst detection and mitigation")
+    @security.sub_command(
+        name="configure", description="Configure raid burst detection and mitigation"
+    )
     @commands.default_member_permissions(manage_guild=True)
     async def configure(
         self,

@@ -186,9 +186,13 @@ class RaidProtectionConfig(Base):
     alert_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     mitigation_action: Mapped[str] = mapped_column(String(32), nullable=False, default="none")
     mitigation_duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=900)
-    mitigation_active_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    mitigation_active_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     previous_verification_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_triggered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

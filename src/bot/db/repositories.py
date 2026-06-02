@@ -429,9 +429,7 @@ class AnnouncementRepository:
         last_run_at: datetime,
         next_run_at: datetime,
     ) -> ScheduledAnnouncement | None:
-        statement = select(ScheduledAnnouncement).where(
-            ScheduledAnnouncement.id == announcement_id
-        )
+        statement = select(ScheduledAnnouncement).where(ScheduledAnnouncement.id == announcement_id)
         result = await self._session.execute(statement)
         row = result.scalar_one_or_none()
         if row is None:

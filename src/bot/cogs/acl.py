@@ -45,12 +45,19 @@ class AclCog(BaseCog):
     async def allow(
         self,
         interaction: ApplicationCommandInteraction,
-        command_name: str = commands.Param(min_length=1, max_length=120),
-        role: disnake.Role = commands.Param(),
+        command_name: str,
+        role: disnake.Role,
     ) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
                 "This command can only be used in a server.",
+                ephemeral=True,
+            )
+            return
+
+        if not command_name.strip() or len(command_name.strip()) > 120:
+            await interaction.response.send_message(
+                "Command name must be between 1 and 120 characters.",
                 ephemeral=True,
             )
             return
@@ -75,12 +82,19 @@ class AclCog(BaseCog):
     async def revoke(
         self,
         interaction: ApplicationCommandInteraction,
-        command_name: str = commands.Param(min_length=1, max_length=120),
-        role: disnake.Role = commands.Param(),
+        command_name: str,
+        role: disnake.Role,
     ) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
                 "This command can only be used in a server.",
+                ephemeral=True,
+            )
+            return
+
+        if not command_name.strip() or len(command_name.strip()) > 120:
+            await interaction.response.send_message(
+                "Command name must be between 1 and 120 characters.",
                 ephemeral=True,
             )
             return
@@ -112,7 +126,7 @@ class AclCog(BaseCog):
     async def list_rules(
         self,
         interaction: ApplicationCommandInteraction,
-        command_name: str | None = commands.Param(default=None),
+        command_name: str | None = None,
     ) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(

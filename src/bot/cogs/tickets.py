@@ -221,7 +221,8 @@ class TicketCog(BaseCog):
         mention = notify_role.mention if notify_role is not None else "Staff"
         try:
             await channel.send(
-                f"{mention} ticket escalated to **{priority}** priority by {interaction.author.mention}.",
+                f"{mention} ticket escalated to **{priority}** priority "
+                f"by {interaction.author.mention}."
             )
         except disnake.HTTPException:
             pass

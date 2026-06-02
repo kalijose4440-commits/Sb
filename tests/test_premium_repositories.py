@@ -57,7 +57,9 @@ async def test_premium_repositories_round_trip(tmp_path) -> None:
             content="sample transcript",
         )
         assert transcript.ticket_id == ticket.id
-        assert len(await ticket_repo.list_transcripts_for_ticket(guild_id=1, ticket_id=ticket.id)) == 1
+        assert (
+            len(await ticket_repo.list_transcripts_for_ticket(guild_id=1, ticket_id=ticket.id)) == 1
+        )
 
         await ticket_repo.close_ticket(101)
         assert (await ticket_repo.get_by_channel_id(101)).status == "closed"
@@ -110,7 +112,9 @@ async def test_premium_repositories_round_trip(tmp_path) -> None:
             previous_verification_level=1,
             active_until=active_until,
         )
-        due_releases = await raid_repo.due_mitigation_releases(datetime.now(UTC) + timedelta(minutes=6))
+        due_releases = await raid_repo.due_mitigation_releases(
+            datetime.now(UTC) + timedelta(minutes=6)
+        )
         assert any(row.guild_id == 1 for row in due_releases)
         await raid_repo.clear_mitigation(1)
         assert (await raid_repo.get_config(1)).mitigation_active_until is None

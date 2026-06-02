@@ -14,16 +14,29 @@ from bot.bridge.state import BridgeState
 from bot.core.config import Settings
 from bot.core.lifecycle import run_services
 from bot.core.logging import setup_logging
+from bot.core.response_style import install_interaction_response_style_patch
 from bot.db.session import create_engine_and_sessionmaker, init_db
 
 
-class DashboardBot(commands.InteractionBot):
-    """Typed InteractionBot that carries app-wide shared dependencies."""
+class DashboardBot(commands.Bot):
+    """Typed bot that carries app-wide shared dependencies."""
 
     bridge: BridgeState
     settings: Settings
     logger: logging.Logger
     started_at: datetime
+
+
+async def resolve_prefix(bot: DashboardBot, message: disnake.Message) -> str | list[str]:
+    """Resolve per-guild command prefixes from runtime settings."""
+
+    default_prefix = bot.settings.default_prefix
+    if message.guild is None:
+        return commands.when_mentioned_or(default_prefix)(bot, message)
+
+    snapshot = await bot.bridge.get_or_load_settings(message.guild.id)
+    prefix = snapshot.prefix or default_prefix
+    return commands.when_mentioned_or(prefix)(bot, message)
 
 
 def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
@@ -35,7 +48,11 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
     intents.message_content = settings.enable_message_content_intent
     intents.reactions = True
 
-    bot = DashboardBot(intents=intents)
+    bot = DashboardBot(
+        command_prefix=resolve_prefix,
+        intents=intents,
+        help_command=None,
+    )
     bot.bridge = bridge
     bot.settings = settings
     bot.logger = logging.getLogger("bot.discord")
@@ -47,6 +64,12 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
             "discord_bot_ready",
             extra={"bot_user": str(bot.user), "guild_count": len(bot.guilds)},
         )
+
+    @bot.event
+    async def on_message(message: disnake.Message) -> None:
+        if message.author.bot:
+            return
+        await bot.process_commands(message)
 
     return bot
 
@@ -66,6 +89,7 @@ async def _shutdown(bot: DashboardBot, engine: AsyncEngine) -> None:
 async def main() -> None:
     settings = Settings()
     setup_logging(settings.log_level)
+    install_interaction_response_style_patch()
     logger = logging.getLogger("bot")
 
     engine, session_factory = create_engine_and_sessionmaker(settings.database_url)

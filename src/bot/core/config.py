@@ -38,6 +38,7 @@ class Settings(BaseSettings):
         "bot.cogs.welcome",
         "bot.cogs.security",
         "bot.cogs.acl",
+        "bot.cogs.prefix_bridge",
         "bot.cogs.tickets",
         "bot.cogs.automod",
         "bot.cogs.reaction_roles",

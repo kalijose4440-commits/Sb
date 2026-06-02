@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import disnake
 from disnake.ext import commands
@@ -92,7 +92,6 @@ class BaseCog(commands.Cog):
             snapshot = await self.bridge.get_or_load_settings(guild_id)
             prefix = snapshot.prefix
 
-        slash_lines = "\n".join(f"- `/{example}`" for example in slash_examples)
         prefix_lines = "\n".join(f"- `{prefix}{example}`" for example in prefix_examples)
 
         embed = disnake.Embed(
@@ -100,7 +99,10 @@ class BaseCog(commands.Cog):
             description="Pick one of the subcommands below.",
             color=disnake.Color.blurple(),
         )
-        embed.add_field(name="Slash", value=slash_lines, inline=False)
+        bot_settings = cast(Any, self.bot).settings
+        if getattr(bot_settings, "enable_slash_commands", False):
+            slash_lines = "\n".join(f"- `/{example}`" for example in slash_examples)
+            embed.add_field(name="Slash", value=slash_lines, inline=False)
         embed.add_field(name="Prefix", value=prefix_lines, inline=False)
         await interaction.response.send_message(embed=embed)
 

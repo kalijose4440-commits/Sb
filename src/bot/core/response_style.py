@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # mypy: ignore-errors
+from datetime import UTC, datetime
 from typing import Any
 
 import disnake
@@ -8,14 +9,21 @@ import disnake
 _PATCH_INSTALLED = False
 
 
-def build_standard_embed(description: str, *, title: str = "Bot") -> disnake.Embed:
-    """Build a default embed used for command responses."""
+def build_standard_embed(
+    description: str,
+    *,
+    title: str = "Sb Bot",
+    color: disnake.Color | None = None,
+) -> disnake.Embed:
+    """Build a polished default embed used for bot command responses."""
 
     embed = disnake.Embed(
         title=title,
         description=description,
-        color=disnake.Color.blurple(),
+        color=color or disnake.Color.blurple(),
+        timestamp=datetime.now(UTC),
     )
+    embed.set_footer(text="Sb Premium Bot")
     return embed
 
 
@@ -30,11 +38,7 @@ def _coerce_embed_payload(
     if force_public:
         payload["ephemeral"] = False
 
-    if (
-        content is not None
-        and "embed" not in payload
-        and "embeds" not in payload
-    ):
+    if content is not None and "embed" not in payload and "embeds" not in payload:
         payload["embed"] = build_standard_embed(str(content))
         content = None
 
@@ -48,46 +52,28 @@ def install_interaction_response_style_patch() -> None:
     if _PATCH_INSTALLED:
         return
 
-    original_send_message = disnake.InteractionResponse.send_message
-    original_edit_original_response = disnake.Interaction.edit_original_response
-    original_webhook_send = disnake.Webhook.send
+    interaction_response_cls = disnake.InteractionResponse
+    interaction_cls = disnake.Interaction
+    webhook_cls = disnake.Webhook
 
-    async def patched_send_message(
-        self: disnake.InteractionResponse,
-        content=None,
-        *args,
-        **kwargs,
-    ):
-        coerced_content, payload = _coerce_embed_payload(
-            content,
-            kwargs,
-            force_public=True,
-        )
+    original_send_message = interaction_response_cls.send_message
+    original_edit_original_response = interaction_cls.edit_original_response
+    original_webhook_send = webhook_cls.send
+
+    async def patched_send_message(self, content=None, *args, **kwargs):
+        coerced_content, payload = _coerce_embed_payload(content, kwargs, force_public=True)
         return await original_send_message(self, coerced_content, *args, **payload)
 
-    async def patched_edit_original_response(
-        self: disnake.Interaction,
-        content=None,
-        *args,
-        **kwargs,
-    ):
-        coerced_content, payload = _coerce_embed_payload(
-            content,
-            kwargs,
-            force_public=False,
-        )
+    async def patched_edit_original_response(self, content=None, *args, **kwargs):
+        coerced_content, payload = _coerce_embed_payload(content, kwargs, force_public=False)
         return await original_edit_original_response(self, coerced_content, *args, **payload)
 
-    async def patched_webhook_send(self: disnake.Webhook, content=None, *args, **kwargs):
-        coerced_content, payload = _coerce_embed_payload(
-            content,
-            kwargs,
-            force_public=True,
-        )
+    async def patched_webhook_send(self, content=None, *args, **kwargs):
+        coerced_content, payload = _coerce_embed_payload(content, kwargs, force_public=True)
         return await original_webhook_send(self, coerced_content, *args, **payload)
 
-    disnake.InteractionResponse.send_message = patched_send_message
-    disnake.Interaction.edit_original_response = patched_edit_original_response
-    disnake.Webhook.send = patched_webhook_send
+    interaction_response_cls.send_message = patched_send_message
+    interaction_cls.edit_original_response = patched_edit_original_response
+    webhook_cls.send = patched_webhook_send
 
     _PATCH_INSTALLED = True

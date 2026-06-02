@@ -48,10 +48,16 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
     intents.message_content = settings.enable_message_content_intent
     intents.reactions = True
 
+    command_sync_flags = (
+        commands.CommandSyncFlags.default()
+        if settings.enable_slash_commands
+        else commands.CommandSyncFlags.none()
+    )
     bot = DashboardBot(
         command_prefix=resolve_prefix,
         intents=intents,
         help_command=None,
+        command_sync_flags=command_sync_flags,
     )
     bot.bridge = bridge
     bot.settings = settings
@@ -60,6 +66,8 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
 
     @bot.event
     async def on_ready() -> None:
+        if not bot.settings.enable_slash_commands:
+            await _clear_remote_app_commands(bot)
         bot.logger.info(
             "discord_bot_ready",
             extra={"bot_user": str(bot.user), "guild_count": len(bot.guilds)},
@@ -72,6 +80,31 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
         await bot.process_commands(message)
 
     return bot
+
+
+async def _clear_remote_app_commands(bot: DashboardBot) -> None:
+    """Clear slash/user/message commands when running in prefix-only mode."""
+
+    for slash_cmd in list(bot.slash_commands):
+        bot.remove_slash_command(slash_cmd.name)
+    for user_cmd in list(bot.user_commands):
+        bot.remove_user_command(user_cmd.name)
+    for message_cmd in list(bot.message_commands):
+        bot.remove_message_command(message_cmd.name)
+
+    try:
+        await bot.bulk_overwrite_global_commands([])
+    except disnake.HTTPException:
+        bot.logger.warning("failed_to_clear_global_app_commands")
+
+    for guild in bot.guilds:
+        try:
+            await bot.bulk_overwrite_guild_commands(guild.id, [])
+        except disnake.HTTPException:
+            bot.logger.warning(
+                "failed_to_clear_guild_app_commands",
+                extra={"guild_id": guild.id},
+            )
 
 
 async def _load_extensions(bot: DashboardBot) -> None:

@@ -7,6 +7,7 @@ import disnake
 from disnake.ext import commands
 
 from bot.core.prefix_adapter import PrefixInteractionAdapter
+from bot.core.response_style import build_standard_embed
 
 
 class PrefixBridgeCog(commands.Cog):
@@ -118,7 +119,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="welcome", invoke_without_command=True)
     async def welcome_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `welcome <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `welcome <subcommand>`."))
 
     @welcome_group.command(name="status")
     @commands.has_permissions(manage_guild=True)
@@ -162,7 +163,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="security", invoke_without_command=True)
     async def security_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `security <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `security <subcommand>`."))
 
     @security_group.command(name="status")
     @commands.has_permissions(manage_guild=True)
@@ -205,7 +206,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="acl", invoke_without_command=True)
     async def acl_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `acl <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `acl <subcommand>`."))
 
     @acl_group.command(name="allow")
     @commands.has_permissions(manage_guild=True)
@@ -244,7 +245,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="ticket", invoke_without_command=True)
     async def ticket_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `ticket <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `ticket <subcommand>`."))
 
     @ticket_group.command(name="open")
     async def ticket_open(self, ctx: commands.Context, *, subject: str) -> None:
@@ -297,7 +298,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="automod", invoke_without_command=True)
     async def automod_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `automod <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `automod <subcommand>`."))
 
     @automod_group.command(name="add")
     @commands.has_permissions(manage_guild=True)
@@ -330,7 +331,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="reactionrole", invoke_without_command=True)
     async def reactionrole_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `reactionrole <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `reactionrole <subcommand>`."))
 
     @reactionrole_group.command(name="bind")
     @commands.has_permissions(manage_roles=True)
@@ -359,7 +360,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="announce", invoke_without_command=True)
     async def announce_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `announce <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `announce <subcommand>`."))
 
     @announce_group.command(name="create")
     @commands.has_permissions(manage_guild=True)
@@ -399,7 +400,7 @@ class PrefixBridgeCog(commands.Cog):
 
     @commands.group(name="analytics", invoke_without_command=True)
     async def analytics_group(self, ctx: commands.Context) -> None:
-        await ctx.send(embed=disnake.Embed(description="Use `analytics <subcommand>`"))
+        await ctx.send(embed=build_standard_embed("Use `analytics <subcommand>`."))
 
     @analytics_group.command(name="topcommands")
     @commands.has_permissions(manage_guild=True)

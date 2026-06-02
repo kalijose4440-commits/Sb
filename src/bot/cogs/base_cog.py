@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import cast
 
+import disnake
 from disnake.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -73,6 +74,35 @@ class BaseCog(commands.Cog):
 
         await self.bridge.publish_status_change(guild_id=guild_id, status=status)
         return GuildSettingsRead.model_validate(row, from_attributes=True)
+
+
+    async def send_subcommand_help(
+        self,
+        interaction,
+        *,
+        group_name: str,
+        slash_examples: list[str],
+        prefix_examples: list[str],
+    ) -> None:
+        """Send a unified group help embed with slash and prefix usage."""
+
+        prefix = self.bridge.default_prefix
+        guild_id = getattr(interaction, "guild_id", None)
+        if guild_id is not None:
+            snapshot = await self.bridge.get_or_load_settings(guild_id)
+            prefix = snapshot.prefix
+
+        slash_lines = "\n".join(f"- `/{example}`" for example in slash_examples)
+        prefix_lines = "\n".join(f"- `{prefix}{example}`" for example in prefix_examples)
+
+        embed = disnake.Embed(
+            title=f"{group_name.title()} commands",
+            description="Pick one of the subcommands below.",
+            color=disnake.Color.blurple(),
+        )
+        embed.add_field(name="Slash", value=slash_lines, inline=False)
+        embed.add_field(name="Prefix", value=prefix_lines, inline=False)
+        await interaction.response.send_message(embed=embed)
 
     async def get_runtime_snapshot(self, guild_id: int) -> GuildSettingsSnapshot:
         """Read the latest in-memory value propagated by the dashboard API."""

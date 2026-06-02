@@ -30,9 +30,11 @@ class AnalyticsCog(BaseCog):
 
     @commands.slash_command(name="analytics", description="View command usage analytics")
     async def analytics(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use an analytics subcommand such as `/analytics topcommands`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="analytics",
+            slash_examples=["analytics topcommands", "analytics topusers"],
+            prefix_examples=["analytics topcommands", "analytics topusers"],
         )
 
     @analytics.sub_command(name="topcommands", description="Show most-used commands")

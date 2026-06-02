@@ -32,9 +32,21 @@ class SecurityCog(BaseCog):
 
     @commands.slash_command(name="security", description="Manage raid and security controls")
     async def security(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use a security subcommand such as `/security status`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="security",
+            slash_examples=[
+                "security status",
+                "security configure",
+                "security enable",
+                "security disable",
+            ],
+            prefix_examples=[
+                "security status",
+                "security configure",
+                "security enable",
+                "security disable",
+            ],
         )
 
     @security.sub_command(name="status", description="Show raid protection settings")

@@ -30,9 +30,21 @@ class AnnouncementCog(BaseCog):
 
     @commands.slash_command(name="announce", description="Manage recurring announcements")
     async def announce(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use an announce subcommand such as `/announce create`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="announce",
+            slash_examples=[
+                "announce create",
+                "announce toggle",
+                "announce list",
+                "announce runnow",
+            ],
+            prefix_examples=[
+                "announce create",
+                "announce toggle",
+                "announce list",
+                "announce runnow",
+            ],
         )
 
     @announce.sub_command(name="create", description="Create a repeating announcement")

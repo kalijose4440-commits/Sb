@@ -18,9 +18,23 @@ class TicketCog(BaseCog):
 
     @commands.slash_command(name="ticket", description="Manage support tickets")
     async def ticket(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use a ticket subcommand such as `/ticket open` or `/ticket close`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="ticket",
+            slash_examples=[
+                "ticket open <subject>",
+                "ticket close",
+                "ticket escalate",
+                "ticket transcript",
+                "ticket list",
+            ],
+            prefix_examples=[
+                "ticket open <subject>",
+                "ticket close",
+                "ticket escalate",
+                "ticket transcript",
+                "ticket list",
+            ],
         )
 
     @ticket.sub_command(name="open", description="Open a support ticket")

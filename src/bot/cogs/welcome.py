@@ -16,9 +16,25 @@ class WelcomeCog(BaseCog):
 
     @commands.slash_command(name="welcome", description="Configure welcome onboarding messages")
     async def welcome(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use a welcome subcommand such as `/welcome enable`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="welcome",
+            slash_examples=[
+                "welcome status",
+                "welcome setchannel",
+                "welcome message",
+                "welcome enable",
+                "welcome disable",
+                "welcome preview",
+            ],
+            prefix_examples=[
+                "welcome status",
+                "welcome setchannel",
+                "welcome message",
+                "welcome enable",
+                "welcome disable",
+                "welcome preview",
+            ],
         )
 
     @welcome.sub_command(name="status", description="Show current welcome configuration")

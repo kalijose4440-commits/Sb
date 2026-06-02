@@ -35,9 +35,11 @@ class AclCog(BaseCog):
 
     @commands.slash_command(name="acl", description="Manage role-based command allow-list rules")
     async def acl(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use an ACL subcommand such as `/acl allow`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="acl",
+            slash_examples=["acl allow", "acl revoke", "acl list"],
+            prefix_examples=["acl allow", "acl revoke", "acl list"],
         )
 
     @acl.sub_command(name="allow", description="Allow a role to use a slash command")

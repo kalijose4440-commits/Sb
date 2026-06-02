@@ -15,9 +15,11 @@ class ReactionRoleCog(BaseCog):
 
     @commands.slash_command(name="reactionrole", description="Manage reaction role bindings")
     async def reactionrole(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use a reaction role subcommand such as `/reactionrole bind`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="reactionrole",
+            slash_examples=["reactionrole bind", "reactionrole unbind", "reactionrole list"],
+            prefix_examples=["reactionrole bind", "reactionrole unbind", "reactionrole list"],
         )
 
     @reactionrole.sub_command(name="bind", description="Bind an emoji reaction to a role")

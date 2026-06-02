@@ -15,9 +15,11 @@ class AutoModCog(BaseCog):
 
     @commands.slash_command(name="automod", description="Manage automod keyword rules")
     async def automod(self, interaction: ApplicationCommandInteraction) -> None:
-        await interaction.response.send_message(
-            "Use an automod subcommand such as `/automod add`.",
-            ephemeral=True,
+        await self.send_subcommand_help(
+            interaction,
+            group_name="automod",
+            slash_examples=["automod add", "automod remove", "automod toggle", "automod list"],
+            prefix_examples=["automod add", "automod remove", "automod toggle", "automod list"],
         )
 
     @automod.sub_command(name="add", description="Add or update an automod keyword")

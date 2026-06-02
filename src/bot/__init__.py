@@ -1,0 +1,1 @@
+"""Disnake + FastAPI bot package."""

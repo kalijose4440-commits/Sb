@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 from bot.api.app import create_api
 from bot.bridge.state import BridgeState
 from bot.core.config import Settings
+from bot.db.repositories import TicketRepository
 from bot.db.session import create_engine_and_sessionmaker, init_db
 
 
@@ -14,6 +15,12 @@ async def test_premium_api_routes_cover_core_workflows(tmp_path) -> None:
     database_url = f"sqlite+aiosqlite:///{tmp_path / 'premium_api.db'}"
     engine, session_factory = create_engine_and_sessionmaker(database_url)
     await init_db(engine)
+
+    async with session_factory() as session:
+        ticket_repo = TicketRepository(session)
+        ticket = await ticket_repo.create_ticket(42, 9991, 7771, "Need urgent help")
+        await session.commit()
+        ticket_id = ticket.id
 
     settings = Settings(discord_token="test-token", database_url=database_url)
     bridge = BridgeState(session_factory=session_factory)
@@ -54,13 +61,27 @@ async def test_premium_api_routes_cover_core_workflows(tmp_path) -> None:
         remove_reaction = await client.delete("/api/v1/premium/42/reaction-roles/10/fire")
         assert remove_reaction.status_code == 204
 
+        escalate_ticket = await client.patch(
+            f"/api/v1/premium/42/tickets/{ticket_id}/escalate",
+            json={"priority": "critical", "escalated_role_id": 321},
+        )
+        assert escalate_ticket.status_code == 200
+        assert escalate_ticket.json()["priority"] == "critical"
+
+        ticket_transcripts = await client.get(f"/api/v1/premium/42/tickets/{ticket_id}/transcripts")
+        assert ticket_transcripts.status_code == 200
+
         get_welcome = await client.get("/api/v1/premium/42/welcome")
         assert get_welcome.status_code == 200
         assert get_welcome.json()["enabled"] is False
 
         patch_welcome = await client.patch(
             "/api/v1/premium/42/welcome",
-            json={"channel_id": 1234, "enabled": True, "message_template": "Welcome {mention}"},
+            json={
+                "channel_id": 1234,
+                "enabled": True,
+                "message_template": "Welcome {mention}",
+            },
         )
         assert patch_welcome.status_code == 200
         assert patch_welcome.json()["enabled"] is True
@@ -76,10 +97,31 @@ async def test_premium_api_routes_cover_core_workflows(tmp_path) -> None:
                 "join_threshold": 6,
                 "window_seconds": 25,
                 "alert_channel_id": 1234,
+                "mitigation_action": "verification_high",
+                "mitigation_duration_seconds": 600,
             },
         )
         assert patch_security.status_code == 200
         assert patch_security.json()["enabled"] is True
         assert patch_security.json()["join_threshold"] == 6
+        assert patch_security.json()["mitigation_action"] == "verification_high"
+
+        add_acl = await client.post(
+            "/api/v1/premium/42/acl",
+            json={"command_name": "ticket open", "role_id": 888},
+        )
+        assert add_acl.status_code == 200
+        assert add_acl.json()["command_name"] == "ticket open"
+
+        list_acl = await client.get("/api/v1/premium/42/acl", params={"command_name": "ticket open"})
+        assert list_acl.status_code == 200
+        assert len(list_acl.json()) == 1
+
+        remove_acl = await client.request(
+            "DELETE",
+            "/api/v1/premium/42/acl",
+            json={"command_name": "ticket open", "role_id": 888},
+        )
+        assert remove_acl.status_code == 204
 
     await engine.dispose()

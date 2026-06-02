@@ -34,7 +34,7 @@ class GuildSettings(Base):
 
 
 class TicketThread(Base):
-    """Tracks open and closed ticket channels per guild."""
+    """Tracks open/closed ticket channels and escalation metadata per guild."""
 
     __tablename__ = "ticket_threads"
 
@@ -44,12 +44,34 @@ class TicketThread(Base):
     owner_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
     subject: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="open")
+    priority: Mapped[str] = mapped_column(String(16), nullable=False, default="normal")
+    escalated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    escalated_role_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class TicketTranscript(Base):
+    """Stores generated transcript snapshots for closed/escalated tickets."""
+
+    __tablename__ = "ticket_transcripts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticket_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    channel_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    generated_by_user_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
 
 class AutoModKeyword(Base):
@@ -153,7 +175,7 @@ class WelcomeConfig(Base):
 
 
 class RaidProtectionConfig(Base):
-    """Configuration for simple anti-raid burst detection."""
+    """Configuration for anti-raid burst detection and automated mitigation."""
 
     __tablename__ = "raid_protection_configs"
 
@@ -162,12 +184,33 @@ class RaidProtectionConfig(Base):
     join_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
     window_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
     alert_channel_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    last_triggered_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    mitigation_action: Mapped[str] = mapped_column(String(32), nullable=False, default="none")
+    mitigation_duration_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=900)
+    mitigation_active_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    previous_verification_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+
+class CommandAclEntry(Base):
+    """Role-based allow-list rules for slash command execution."""
+
+    __tablename__ = "command_acl_entries"
+    __table_args__ = (
+        UniqueConstraint("guild_id", "command_name", "role_id", name="uq_acl_guild_command_role"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    guild_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    command_name: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    role_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
     )

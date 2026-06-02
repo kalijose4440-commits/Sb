@@ -69,8 +69,29 @@ class TicketRead(BaseModel):
     owner_id: int
     subject: str
     status: str
+    priority: str
+    escalated: bool
+    escalated_role_id: int | None
+    escalated_at: datetime | None
     created_at: datetime
     closed_at: datetime | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TicketEscalationUpdate(BaseModel):
+    priority: str = Field(default="high", pattern="^(low|normal|high|critical)$")
+    escalated_role_id: int | None = None
+
+
+class TicketTranscriptRead(BaseModel):
+    id: int
+    ticket_id: int
+    guild_id: int
+    channel_id: int
+    generated_by_user_id: int
+    content: str
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -96,6 +117,8 @@ class RaidProtectionConfigUpdate(BaseModel):
     join_threshold: int | None = Field(default=None, ge=3, le=100)
     window_seconds: int | None = Field(default=None, ge=10, le=600)
     alert_channel_id: int | None = None
+    mitigation_action: str | None = Field(default=None, pattern="^(none|verification_high)$")
+    mitigation_duration_seconds: int | None = Field(default=None, ge=60, le=14400)
 
 
 class RaidProtectionConfigRead(BaseModel):
@@ -104,7 +127,26 @@ class RaidProtectionConfigRead(BaseModel):
     join_threshold: int
     window_seconds: int
     alert_channel_id: int | None
+    mitigation_action: str
+    mitigation_duration_seconds: int
+    mitigation_active_until: datetime | None
+    previous_verification_level: int | None
     last_triggered_at: datetime | None
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AclRuleWrite(BaseModel):
+    command_name: str = Field(min_length=1, max_length=120)
+    role_id: int
+
+
+class AclRuleRead(BaseModel):
+    id: int
+    guild_id: int
+    command_name: str
+    role_id: int
+    created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

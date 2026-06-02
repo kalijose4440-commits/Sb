@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -8,6 +9,7 @@ from disnake.ext import commands
 from disnake.interactions.application_command import ApplicationCommandInteraction
 
 from bot.cogs.base_cog import BaseCog
+from bot.core.transcripts import build_text_transcript
 from bot.db.repositories import TicketRepository
 
 
@@ -96,7 +98,8 @@ class TicketCog(BaseCog):
             "A team member will assist you shortly.",
         )
         await interaction.response.send_message(
-            f"Ticket created: {channel.mention}", ephemeral=True
+            f"Ticket created: {channel.mention}",
+            ephemeral=True,
         )
 
     @ticket.sub_command(name="close", description="Close the current ticket channel")
@@ -104,6 +107,7 @@ class TicketCog(BaseCog):
         self,
         interaction: ApplicationCommandInteraction,
         archive: bool = commands.Param(default=True),
+        generate_transcript: bool = commands.Param(default=True),
     ) -> None:
         if interaction.guild is None or interaction.channel is None:
             await interaction.response.send_message(
@@ -112,9 +116,11 @@ class TicketCog(BaseCog):
             )
             return
 
+        channel = cast(disnake.TextChannel, interaction.channel)
+
         async with self._session_factory() as session:
             repository = TicketRepository(session)
-            row = await repository.get_by_channel_id(interaction.channel.id)
+            row = await repository.get_by_channel_id(channel.id)
             if row is None or row.status != "open":
                 await interaction.response.send_message(
                     "This channel is not an open ticket.",
@@ -134,14 +140,41 @@ class TicketCog(BaseCog):
                 )
                 return
 
-            closed = await repository.close_ticket(interaction.channel.id)
+        await interaction.response.defer(ephemeral=True)
+
+        transcript_content: str | None = None
+        if generate_transcript:
+            transcript_content = await build_text_transcript(channel, limit=1000)
+
+        async with self._session_factory() as session:
+            repository = TicketRepository(session)
+            closed = await repository.close_ticket(channel.id)
+            if closed is None:
+                await interaction.edit_original_response(content="Unable to close ticket.")
+                return
+
+            if transcript_content is not None:
+                await repository.create_transcript(
+                    ticket_id=closed.id,
+                    guild_id=closed.guild_id,
+                    channel_id=closed.channel_id,
+                    generated_by_user_id=interaction.author.id,
+                    content=transcript_content,
+                )
+
             await session.commit()
 
-        if closed is None:
-            await interaction.response.send_message("Unable to close ticket.", ephemeral=True)
-            return
+        if transcript_content is not None:
+            transcript_bytes = transcript_content.encode("utf-8")
+            transcript_file = disnake.File(
+                io.BytesIO(transcript_bytes),
+                filename=f"ticket-{closed.id}-transcript.txt",
+            )
+            try:
+                await channel.send("Ticket transcript snapshot:", file=transcript_file)
+            except disnake.HTTPException:
+                pass
 
-        channel = cast(disnake.TextChannel, interaction.channel)
         if archive:
             owner = interaction.guild.get_member(closed.owner_id)
             if owner is not None:
@@ -149,7 +182,110 @@ class TicketCog(BaseCog):
             timestamp = int(datetime.now(UTC).timestamp())
             await channel.edit(name=f"closed-{timestamp}")
 
-        await interaction.response.send_message("Ticket closed.", ephemeral=True)
+        await interaction.edit_original_response(content="Ticket closed.")
+
+    @ticket.sub_command(name="escalate", description="Escalate a ticket to a higher priority")
+    @commands.default_member_permissions(manage_channels=True)
+    async def escalate(
+        self,
+        interaction: ApplicationCommandInteraction,
+        priority: str = commands.Param(
+            default="high",
+            choices=["low", "normal", "high", "critical"],
+        ),
+        notify_role: disnake.Role | None = None,
+    ) -> None:
+        if interaction.guild is None or interaction.channel is None:
+            await interaction.response.send_message(
+                "Run this inside an open ticket channel.",
+                ephemeral=True,
+            )
+            return
+
+        channel = cast(disnake.TextChannel, interaction.channel)
+        await interaction.response.defer(ephemeral=True)
+
+        role_id = notify_role.id if notify_role is not None else None
+        async with self._session_factory() as session:
+            repository = TicketRepository(session)
+            row = await repository.escalate_ticket(
+                channel.id,
+                priority=priority,
+                escalated_role_id=role_id,
+            )
+            if row is None or row.status != "open":
+                await interaction.edit_original_response(content="This is not an active ticket.")
+                return
+            await session.commit()
+
+        mention = notify_role.mention if notify_role is not None else "Staff"
+        try:
+            await channel.send(
+                f"{mention} ticket escalated to **{priority}** priority by {interaction.author.mention}.",
+            )
+        except disnake.HTTPException:
+            pass
+
+        await interaction.edit_original_response(
+            content=f"Ticket escalated to `{priority}` priority.",
+        )
+
+    @ticket.sub_command(name="transcript", description="Generate and send a transcript snapshot")
+    async def transcript(self, interaction: ApplicationCommandInteraction) -> None:
+        if interaction.guild is None or interaction.channel is None:
+            await interaction.response.send_message(
+                "Run this in a ticket channel.",
+                ephemeral=True,
+            )
+            return
+
+        channel = cast(disnake.TextChannel, interaction.channel)
+
+        async with self._session_factory() as session:
+            repository = TicketRepository(session)
+            ticket = await repository.get_by_channel_id(channel.id)
+            if ticket is None:
+                await interaction.response.send_message(
+                    "This channel is not a tracked ticket.",
+                    ephemeral=True,
+                )
+                return
+
+            is_owner = ticket.owner_id == interaction.author.id
+            has_manage_channels = bool(
+                isinstance(interaction.author, disnake.Member)
+                and interaction.author.guild_permissions.manage_channels
+            )
+            if not is_owner and not has_manage_channels:
+                await interaction.response.send_message(
+                    "Only the ticket owner or staff can export transcripts.",
+                    ephemeral=True,
+                )
+                return
+
+        await interaction.response.defer(ephemeral=True)
+
+        transcript_content = await build_text_transcript(channel, limit=1000)
+        async with self._session_factory() as session:
+            repository = TicketRepository(session)
+            await repository.create_transcript(
+                ticket_id=ticket.id,
+                guild_id=ticket.guild_id,
+                channel_id=ticket.channel_id,
+                generated_by_user_id=interaction.author.id,
+                content=transcript_content,
+            )
+            await session.commit()
+
+        transcript_file = disnake.File(
+            io.BytesIO(transcript_content.encode("utf-8")),
+            filename=f"ticket-{ticket.id}-transcript.txt",
+        )
+        await interaction.followup.send(
+            content="Transcript generated.",
+            file=transcript_file,
+            ephemeral=True,
+        )
 
     @ticket.sub_command(name="add", description="Grant ticket access to a member")
     @commands.default_member_permissions(manage_channels=True)
@@ -159,7 +295,10 @@ class TicketCog(BaseCog):
         member: disnake.Member,
     ) -> None:
         if interaction.channel is None:
-            await interaction.response.send_message("Run this in a ticket channel.", ephemeral=True)
+            await interaction.response.send_message(
+                "Run this in a ticket channel.",
+                ephemeral=True,
+            )
             return
 
         async with self._session_factory() as session:
@@ -168,14 +307,16 @@ class TicketCog(BaseCog):
 
         if row is None:
             await interaction.response.send_message(
-                "This channel is not a tracked ticket.", ephemeral=True
+                "This channel is not a tracked ticket.",
+                ephemeral=True,
             )
             return
 
         channel = cast(disnake.TextChannel, interaction.channel)
         await channel.set_permissions(member, view_channel=True, send_messages=True)
         await interaction.response.send_message(
-            f"Added {member.mention} to this ticket.", ephemeral=True
+            f"Added {member.mention} to this ticket.",
+            ephemeral=True,
         )
 
     @ticket.sub_command(name="remove", description="Revoke ticket access from a member")
@@ -186,7 +327,10 @@ class TicketCog(BaseCog):
         member: disnake.Member,
     ) -> None:
         if interaction.channel is None:
-            await interaction.response.send_message("Run this in a ticket channel.", ephemeral=True)
+            await interaction.response.send_message(
+                "Run this in a ticket channel.",
+                ephemeral=True,
+            )
             return
 
         async with self._session_factory() as session:
@@ -195,7 +339,8 @@ class TicketCog(BaseCog):
 
         if row is None:
             await interaction.response.send_message(
-                "This channel is not a tracked ticket.", ephemeral=True
+                "This channel is not a tracked ticket.",
+                ephemeral=True,
             )
             return
 
@@ -225,7 +370,8 @@ class TicketCog(BaseCog):
             return
 
         lines = [
-            f"`#{row.id}` <#{row.channel_id}> owner: <@{row.owner_id}> subject: {row.subject}"
+            f"`#{row.id}` <#{row.channel_id}> owner: <@{row.owner_id}> "
+            f"priority: `{row.priority}` escalated: `{row.escalated}`"
             for row in rows[:20]
         ]
         await interaction.response.send_message("\n".join(lines), ephemeral=True)

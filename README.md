@@ -5,7 +5,7 @@ Production-grade Discord bot scaffold with:
 - **Disnake** slash commands and modular Cog architecture
 - **FastAPI** dashboard backend for real-time config
 - **PostgreSQL + async SQLAlchemy** persistence
-- **Premium automation modules** (welcome, security, tickets, automod, reaction roles, announcements, analytics)
+- **Premium automation modules** (welcome, security, ACL, tickets, automod, reaction roles, announcements, analytics)
 - **Rich rotating presence** with dynamic placeholders
 - **Docker** deployment support
 - **Structured logging, type hints, lint/type/test workflow**
@@ -55,12 +55,27 @@ You can keep `DISCORD_TOKEN` as a placeholder until you are ready to launch.
 - `/security enable`
 - `/security disable`
 
+`/security configure` supports automated mitigation actions:
+- `none`
+- `verification_high` (temporarily raises guild verification level and auto-restores)
+
+### Premium: ACL
+- `/acl allow`
+- `/acl revoke`
+- `/acl list`
+
+ACL rules are role-based allow-lists by slash command qualified name (e.g. `ticket open`).
+
 ### Premium: Tickets
 - `/ticket open`
 - `/ticket close`
+- `/ticket escalate`
+- `/ticket transcript`
 - `/ticket add`
 - `/ticket remove`
 - `/ticket list`
+
+Ticket close/transcript can generate and persist transcript snapshots.
 
 ### Premium: Automod
 - `/automod add`
@@ -115,8 +130,11 @@ watching::{users} members::idle
 - `GET/POST/PATCH /api/v1/premium/{guild_id}/announcements`
 - `GET/POST/DELETE /api/v1/premium/{guild_id}/reaction-roles`
 - `GET /api/v1/premium/{guild_id}/tickets/open`
+- `PATCH /api/v1/premium/{guild_id}/tickets/{ticket_id}/escalate`
+- `GET /api/v1/premium/{guild_id}/tickets/{ticket_id}/transcripts`
 - `GET/PATCH /api/v1/premium/{guild_id}/welcome`
 - `GET/PATCH /api/v1/premium/{guild_id}/security`
+- `GET/POST/DELETE /api/v1/premium/{guild_id}/acl`
 
 ## Quality Workflow
 

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import cast
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.api.premium_schemas import (
+    AclRuleRead,
+    AclRuleWrite,
     AnnouncementCreate,
     AnnouncementRead,
     AnnouncementToggle,
@@ -15,13 +17,16 @@ from bot.api.premium_schemas import (
     RaidProtectionConfigUpdate,
     ReactionRoleCreate,
     ReactionRoleRead,
+    TicketEscalationUpdate,
     TicketRead,
+    TicketTranscriptRead,
     WelcomeConfigRead,
     WelcomeConfigUpdate,
 )
 from bot.db.repositories import (
     AnnouncementRepository,
     AutoModRepository,
+    CommandAclRepository,
     RaidProtectionRepository,
     ReactionRoleRepository,
     TicketRepository,
@@ -170,6 +175,48 @@ async def list_open_tickets(guild_id: int, request: Request) -> list[TicketRead]
     return [TicketRead.model_validate(row, from_attributes=True) for row in rows]
 
 
+@router.patch("/{guild_id}/tickets/{ticket_id}/escalate", response_model=TicketRead)
+async def escalate_ticket(
+    guild_id: int,
+    ticket_id: int,
+    payload: TicketEscalationUpdate,
+    request: Request,
+) -> TicketRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = TicketRepository(session)
+        ticket = await repository.get_by_ticket_id(guild_id, ticket_id)
+        if ticket is None:
+            raise HTTPException(status_code=404, detail="ticket not found")
+
+        row = await repository.escalate_ticket(
+            ticket.channel_id,
+            priority=payload.priority,
+            escalated_role_id=payload.escalated_role_id,
+        )
+        await session.commit()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="ticket not found")
+    return TicketRead.model_validate(row, from_attributes=True)
+
+
+@router.get("/{guild_id}/tickets/{ticket_id}/transcripts", response_model=list[TicketTranscriptRead])
+async def list_ticket_transcripts(
+    guild_id: int,
+    ticket_id: int,
+    request: Request,
+) -> list[TicketTranscriptRead]:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = TicketRepository(session)
+        rows = await repository.list_transcripts_for_ticket(
+            guild_id=guild_id,
+            ticket_id=ticket_id,
+        )
+    return [TicketTranscriptRead.model_validate(row, from_attributes=True) for row in rows]
+
+
 @router.get("/{guild_id}/welcome", response_model=WelcomeConfigRead)
 async def get_welcome_config(guild_id: int, request: Request) -> WelcomeConfigRead:
     session_factory = _session_factory_from_request(request)
@@ -234,8 +281,61 @@ async def patch_security_config(
             join_threshold=payload.join_threshold,
             window_seconds=payload.window_seconds,
             alert_channel_id=payload.alert_channel_id,
+            mitigation_action=payload.mitigation_action,
+            mitigation_duration_seconds=payload.mitigation_duration_seconds,
         )
         await session.commit()
         await session.refresh(row)
         response = RaidProtectionConfigRead.model_validate(row, from_attributes=True)
     return response
+
+
+@router.get("/{guild_id}/acl", response_model=list[AclRuleRead])
+async def list_acl_rules(
+    guild_id: int,
+    request: Request,
+    command_name: str | None = Query(default=None),
+) -> list[AclRuleRead]:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = CommandAclRepository(session)
+        rows = await repository.list_rules(guild_id=guild_id, command_name=command_name)
+    return [AclRuleRead.model_validate(row, from_attributes=True) for row in rows]
+
+
+@router.post("/{guild_id}/acl", response_model=AclRuleRead)
+async def allow_acl_rule(
+    guild_id: int,
+    payload: AclRuleWrite,
+    request: Request,
+) -> AclRuleRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = CommandAclRepository(session)
+        row = await repository.allow_role(
+            guild_id=guild_id,
+            command_name=payload.command_name,
+            role_id=payload.role_id,
+        )
+        await session.commit()
+        await session.refresh(row)
+    return AclRuleRead.model_validate(row, from_attributes=True)
+
+
+@router.delete("/{guild_id}/acl", status_code=204)
+async def revoke_acl_rule(
+    guild_id: int,
+    payload: AclRuleWrite,
+    request: Request,
+) -> None:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = CommandAclRepository(session)
+        removed = await repository.revoke_role(
+            guild_id=guild_id,
+            command_name=payload.command_name,
+            role_id=payload.role_id,
+        )
+        if not removed:
+            raise HTTPException(status_code=404, detail="acl rule not found")
+        await session.commit()

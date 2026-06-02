@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import disnake
-from disnake.ext import commands
+from disnake.ext import commands, tasks
 from disnake.interactions.application_command import ApplicationCommandInteraction
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.cogs.base_cog import BaseCog
 from bot.core.security import should_emit_alert, update_join_window, utc_now
@@ -14,12 +15,20 @@ from bot.db.repositories import RaidProtectionRepository
 
 
 class SecurityCog(BaseCog):
-    """Basic anti-raid controls and member-join burst detection."""
+    """Anti-raid controls with alerting and optional automated mitigation."""
 
-    def __init__(self, bot: commands.InteractionBot, session_factory) -> None:
+    def __init__(
+        self,
+        bot: commands.InteractionBot,
+        session_factory: async_sessionmaker[AsyncSession],
+    ) -> None:
         super().__init__(bot=bot, session_factory=session_factory)
         self._join_windows: dict[int, deque[datetime]] = defaultdict(deque)
         self._last_alert_at: dict[int, datetime] = {}
+        self._mitigation_release_loop.start()
+
+    def cog_unload(self) -> None:
+        self._mitigation_release_loop.cancel()
 
     @commands.slash_command(name="security", description="Manage raid and security controls")
     async def security(self, interaction: ApplicationCommandInteraction) -> None:
@@ -33,7 +42,8 @@ class SecurityCog(BaseCog):
     async def status(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
-                "This command can only be used in a server.", ephemeral=True
+                "This command can only be used in a server.",
+                ephemeral=True,
             )
             return
 
@@ -54,15 +64,22 @@ class SecurityCog(BaseCog):
             if row.last_triggered_at is not None
             else "never"
         )
+        mitigation_until = (
+            f"<t:{int(row.mitigation_active_until.timestamp())}:R>"
+            if row.mitigation_active_until is not None
+            else "inactive"
+        )
         await interaction.response.send_message(
             f"Security is **{'enabled' if row.enabled else 'disabled'}**\n"
             f"Threshold: `{row.join_threshold}` joins / `{row.window_seconds}s`\n"
             f"Alert channel: {alert_channel}\n"
+            f"Mitigation: `{row.mitigation_action}` for `{row.mitigation_duration_seconds}s`\n"
+            f"Mitigation active until: {mitigation_until}\n"
             f"Last trigger: {last_triggered}",
             ephemeral=True,
         )
 
-    @security.sub_command(name="configure", description="Configure raid burst detection thresholds")
+    @security.sub_command(name="configure", description="Configure raid burst detection and mitigation")
     @commands.default_member_permissions(manage_guild=True)
     async def configure(
         self,
@@ -70,10 +87,16 @@ class SecurityCog(BaseCog):
         join_threshold: int = commands.Param(default=8, ge=3, le=100),
         window_seconds: int = commands.Param(default=30, ge=10, le=600),
         alert_channel: disnake.TextChannel | None = None,
+        mitigation_action: str = commands.Param(
+            default="none",
+            choices=["none", "verification_high"],
+        ),
+        mitigation_duration_minutes: int = commands.Param(default=15, ge=1, le=240),
     ) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
-                "This command can only be used in a server.", ephemeral=True
+                "This command can only be used in a server.",
+                ephemeral=True,
             )
             return
 
@@ -85,11 +108,14 @@ class SecurityCog(BaseCog):
                 join_threshold=join_threshold,
                 window_seconds=window_seconds,
                 alert_channel_id=alert_channel_id,
+                mitigation_action=mitigation_action,
+                mitigation_duration_seconds=mitigation_duration_minutes * 60,
             )
             await session.commit()
 
         await interaction.response.send_message(
-            f"Security configured: {join_threshold} joins in {window_seconds}s.",
+            f"Security configured: {join_threshold} joins in {window_seconds}s, "
+            f"mitigation `{mitigation_action}` for {mitigation_duration_minutes}m.",
             ephemeral=True,
         )
 
@@ -98,7 +124,8 @@ class SecurityCog(BaseCog):
     async def enable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
-                "This command can only be used in a server.", ephemeral=True
+                "This command can only be used in a server.",
+                ephemeral=True,
             )
             return
 
@@ -114,7 +141,8 @@ class SecurityCog(BaseCog):
     async def disable(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild_id is None:
             await interaction.response.send_message(
-                "This command can only be used in a server.", ephemeral=True
+                "This command can only be used in a server.",
+                ephemeral=True,
             )
             return
 
@@ -157,26 +185,21 @@ class SecurityCog(BaseCog):
 
         self._last_alert_at[guild.id] = now
 
-        alert_channel: disnake.abc.MessageableChannel | None = None
-        if config.alert_channel_id is not None:
-            candidate = guild.get_channel(config.alert_channel_id)
-            if isinstance(candidate, disnake.TextChannel):
-                alert_channel = candidate
+        mitigation_note = await self._apply_mitigation(guild, config, now)
 
-        if alert_channel is None:
-            alert_channel = guild.system_channel
-
+        alert_channel = self._resolve_alert_channel(guild, config.alert_channel_id)
         if alert_channel is not None:
             embed = disnake.Embed(
                 title="Security alert: join burst detected",
                 description=(
                     f"Detected **{join_count} joins** in the last **{config.window_seconds}s**.\n"
-                    "Review new accounts and consider enabling temporary gatekeeping."
+                    "Review new accounts and consider temporary gatekeeping."
                 ),
                 color=disnake.Color.red(),
             )
             embed.add_field(name="Threshold", value=str(config.join_threshold), inline=True)
             embed.add_field(name="Newest member", value=member.mention, inline=True)
+            embed.add_field(name="Mitigation", value=mitigation_note, inline=False)
             try:
                 await alert_channel.send(embed=embed)
             except disnake.HTTPException:
@@ -186,6 +209,94 @@ class SecurityCog(BaseCog):
             repository = RaidProtectionRepository(session)
             await repository.mark_triggered(guild.id, now)
             await session.commit()
+
+    async def _apply_mitigation(
+        self,
+        guild: disnake.Guild,
+        config,
+        now: datetime,
+    ) -> str:
+        if config.mitigation_action != "verification_high":
+            return "No automatic mitigation configured."
+
+        previous_level = guild.verification_level.value
+        target_level = disnake.VerificationLevel.highest
+
+        if guild.verification_level != target_level:
+            try:
+                await guild.edit(
+                    verification_level=target_level,
+                    reason="Automatic anti-raid mitigation",
+                )
+            except disnake.HTTPException:
+                return "Failed to apply verification-level mitigation."
+
+        active_until = now + timedelta(seconds=config.mitigation_duration_seconds)
+        async with self._session_factory() as session:
+            repository = RaidProtectionRepository(session)
+            await repository.mark_mitigation_started(
+                guild.id,
+                previous_verification_level=previous_level,
+                active_until=active_until,
+            )
+            await session.commit()
+
+        return f"Raised verification to highest until <t:{int(active_until.timestamp())}:R>."
+
+    @tasks.loop(seconds=30)
+    async def _mitigation_release_loop(self) -> None:
+        now = utc_now()
+
+        async with self._session_factory() as session:
+            repository = RaidProtectionRepository(session)
+            due_rows = await repository.due_mitigation_releases(now)
+
+        for row in due_rows:
+            guild = self.bot.get_guild(row.guild_id)
+            if guild is not None and row.previous_verification_level is not None:
+                try:
+                    previous_level = disnake.VerificationLevel(row.previous_verification_level)
+                    await guild.edit(
+                        verification_level=previous_level,
+                        reason="Automatic anti-raid mitigation release",
+                    )
+                except (ValueError, disnake.HTTPException):
+                    pass
+
+            async with self._session_factory() as session:
+                repository = RaidProtectionRepository(session)
+                await repository.clear_mitigation(row.guild_id)
+                await session.commit()
+
+            alert_channel = self._resolve_alert_channel(guild, row.alert_channel_id)
+            if alert_channel is not None:
+                try:
+                    await alert_channel.send(
+                        "Automatic anti-raid mitigation has been released.",
+                    )
+                except disnake.HTTPException:
+                    pass
+
+    @_mitigation_release_loop.before_loop
+    async def _before_release_loop(self) -> None:
+        await self.bot.wait_until_ready()
+
+    def _resolve_alert_channel(
+        self,
+        guild: disnake.Guild | None,
+        alert_channel_id: int | None,
+    ) -> disnake.TextChannel | None:
+        if guild is None:
+            return None
+
+        if alert_channel_id is not None:
+            candidate = guild.get_channel(alert_channel_id)
+            if isinstance(candidate, disnake.TextChannel):
+                return candidate
+
+        if isinstance(guild.system_channel, disnake.TextChannel):
+            return guild.system_channel
+        return None
 
 
 def setup(bot: commands.InteractionBot) -> None:

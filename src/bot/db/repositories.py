@@ -8,14 +8,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from bot.db.models import (
     AutoModKeyword,
+    CommandAclEntry,
     CommandUsageMetric,
     GuildSettings,
     RaidProtectionConfig,
     ReactionRoleBinding,
     ScheduledAnnouncement,
     TicketThread,
+    TicketTranscript,
     WelcomeConfig,
 )
+
+
+def normalize_command_name(command_name: str) -> str:
+    return command_name.strip().lower()
 
 
 class GuildSettingsRepository:
@@ -75,7 +81,7 @@ class GuildSettingsRepository:
 
 
 class TicketRepository:
-    """CRUD operations for ticket channels."""
+    """CRUD operations for ticket channels, escalation, and transcripts."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -93,6 +99,8 @@ class TicketRepository:
             owner_id=owner_id,
             subject=subject,
             status="open",
+            priority="normal",
+            escalated=False,
         )
         self._session.add(row)
         await self._session.flush()
@@ -100,6 +108,14 @@ class TicketRepository:
 
     async def get_by_channel_id(self, channel_id: int) -> TicketThread | None:
         statement = select(TicketThread).where(TicketThread.channel_id == channel_id)
+        result = await self._session.execute(statement)
+        return result.scalar_one_or_none()
+
+    async def get_by_ticket_id(self, guild_id: int, ticket_id: int) -> TicketThread | None:
+        statement = select(TicketThread).where(
+            TicketThread.guild_id == guild_id,
+            TicketThread.id == ticket_id,
+        )
         result = await self._session.execute(statement)
         return result.scalar_one_or_none()
 
@@ -122,11 +138,68 @@ class TicketRepository:
         await self._session.flush()
         return row
 
+    async def escalate_ticket(
+        self,
+        channel_id: int,
+        *,
+        priority: str,
+        escalated_role_id: int | None,
+    ) -> TicketThread | None:
+        row = await self.get_by_channel_id(channel_id)
+        if row is None:
+            return None
+
+        row.priority = priority
+        row.escalated = True
+        row.escalated_role_id = escalated_role_id
+        row.escalated_at = datetime.now(UTC)
+        await self._session.flush()
+        return row
+
     async def list_open_tickets(self, guild_id: int) -> list[TicketThread]:
         statement = (
             select(TicketThread)
             .where(TicketThread.guild_id == guild_id, TicketThread.status == "open")
             .order_by(desc(TicketThread.created_at))
+        )
+        result = await self._session.execute(statement)
+        return list(result.scalars().all())
+
+    async def create_transcript(
+        self,
+        *,
+        ticket_id: int,
+        guild_id: int,
+        channel_id: int,
+        generated_by_user_id: int,
+        content: str,
+    ) -> TicketTranscript:
+        row = TicketTranscript(
+            ticket_id=ticket_id,
+            guild_id=guild_id,
+            channel_id=channel_id,
+            generated_by_user_id=generated_by_user_id,
+            content=content,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return row
+
+    async def list_transcripts_for_ticket(
+        self,
+        *,
+        guild_id: int,
+        ticket_id: int,
+        limit: int = 20,
+    ) -> list[TicketTranscript]:
+        statement = (
+            select(TicketTranscript)
+            .where(
+                TicketTranscript.guild_id == guild_id,
+                TicketTranscript.ticket_id == ticket_id,
+            )
+            .order_by(desc(TicketTranscript.created_at))
+            .limit(limit)
         )
         result = await self._session.execute(statement)
         return list(result.scalars().all())
@@ -356,7 +429,9 @@ class AnnouncementRepository:
         last_run_at: datetime,
         next_run_at: datetime,
     ) -> ScheduledAnnouncement | None:
-        statement = select(ScheduledAnnouncement).where(ScheduledAnnouncement.id == announcement_id)
+        statement = select(ScheduledAnnouncement).where(
+            ScheduledAnnouncement.id == announcement_id
+        )
         result = await self._session.execute(statement)
         row = result.scalar_one_or_none()
         if row is None:
@@ -459,7 +534,7 @@ class WelcomeRepository:
 
 
 class RaidProtectionRepository:
-    """CRUD access for guild raid protection settings."""
+    """CRUD access for guild raid protection settings and mitigation state."""
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
@@ -477,6 +552,8 @@ class RaidProtectionRepository:
         join_threshold: int | None = None,
         window_seconds: int | None = None,
         alert_channel_id: int | None = None,
+        mitigation_action: str | None = None,
+        mitigation_duration_seconds: int | None = None,
     ) -> RaidProtectionConfig:
         row = await self.get_config(guild_id)
         if row is None:
@@ -486,6 +563,8 @@ class RaidProtectionRepository:
                 join_threshold=join_threshold or 8,
                 window_seconds=window_seconds or 30,
                 alert_channel_id=alert_channel_id,
+                mitigation_action=mitigation_action or "none",
+                mitigation_duration_seconds=mitigation_duration_seconds or 900,
             )
             self._session.add(row)
         else:
@@ -497,6 +576,10 @@ class RaidProtectionRepository:
                 row.window_seconds = window_seconds
             if alert_channel_id is not None:
                 row.alert_channel_id = alert_channel_id
+            if mitigation_action is not None:
+                row.mitigation_action = mitigation_action
+            if mitigation_duration_seconds is not None:
+                row.mitigation_duration_seconds = mitigation_duration_seconds
 
         await self._session.flush()
         return row
@@ -506,3 +589,118 @@ class RaidProtectionRepository:
         row.last_triggered_at = triggered_at
         await self._session.flush()
         return row
+
+    async def mark_mitigation_started(
+        self,
+        guild_id: int,
+        *,
+        previous_verification_level: int | None,
+        active_until: datetime,
+    ) -> RaidProtectionConfig:
+        row = await self.upsert_config(guild_id)
+        row.mitigation_active_until = active_until
+        row.previous_verification_level = previous_verification_level
+        await self._session.flush()
+        return row
+
+    async def clear_mitigation(self, guild_id: int) -> RaidProtectionConfig | None:
+        row = await self.get_config(guild_id)
+        if row is None:
+            return None
+
+        row.mitigation_active_until = None
+        row.previous_verification_level = None
+        await self._session.flush()
+        return row
+
+    async def due_mitigation_releases(self, now: datetime) -> list[RaidProtectionConfig]:
+        statement = (
+            select(RaidProtectionConfig)
+            .where(
+                RaidProtectionConfig.mitigation_active_until.is_not(None),
+                RaidProtectionConfig.mitigation_active_until <= now,
+            )
+            .order_by(RaidProtectionConfig.mitigation_active_until)
+        )
+        result = await self._session.execute(statement)
+        return list(result.scalars().all())
+
+
+class CommandAclRepository:
+    """Manages role allow-list entries for slash command access control."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def allow_role(
+        self,
+        *,
+        guild_id: int,
+        command_name: str,
+        role_id: int,
+    ) -> CommandAclEntry:
+        normalized = normalize_command_name(command_name)
+        statement = select(CommandAclEntry).where(
+            CommandAclEntry.guild_id == guild_id,
+            CommandAclEntry.command_name == normalized,
+            CommandAclEntry.role_id == role_id,
+        )
+        result = await self._session.execute(statement)
+        existing = result.scalar_one_or_none()
+        if existing is not None:
+            return existing
+
+        row = CommandAclEntry(
+            guild_id=guild_id,
+            command_name=normalized,
+            role_id=role_id,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        return row
+
+    async def revoke_role(
+        self,
+        *,
+        guild_id: int,
+        command_name: str,
+        role_id: int,
+    ) -> bool:
+        normalized = normalize_command_name(command_name)
+        statement = select(CommandAclEntry).where(
+            CommandAclEntry.guild_id == guild_id,
+            CommandAclEntry.command_name == normalized,
+            CommandAclEntry.role_id == role_id,
+        )
+        result = await self._session.execute(statement)
+        row = result.scalar_one_or_none()
+        if row is None:
+            return False
+
+        await self._session.delete(row)
+        await self._session.flush()
+        return True
+
+    async def list_rules(
+        self,
+        *,
+        guild_id: int,
+        command_name: str | None = None,
+    ) -> list[CommandAclEntry]:
+        statement = select(CommandAclEntry).where(CommandAclEntry.guild_id == guild_id)
+        if command_name is not None:
+            statement = statement.where(
+                CommandAclEntry.command_name == normalize_command_name(command_name)
+            )
+
+        statement = statement.order_by(CommandAclEntry.command_name, CommandAclEntry.role_id)
+        result = await self._session.execute(statement)
+        return list(result.scalars().all())
+
+    async def role_ids_for_command(self, guild_id: int, command_name: str) -> list[int]:
+        statement = select(CommandAclEntry.role_id).where(
+            CommandAclEntry.guild_id == guild_id,
+            CommandAclEntry.command_name == normalize_command_name(command_name),
+        )
+        result = await self._session.execute(statement)
+        return [int(role_id) for role_id in result.scalars().all()]

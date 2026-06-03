@@ -25,6 +25,97 @@ class PrefixBridgeCog(commands.Cog):
             raise commands.CommandError(f"Required cog `{name}` is not loaded")
         return cog
 
+    async def _resolved_prefix(self, ctx: commands.Context) -> str:
+        default_prefix = "!"
+        settings = getattr(self.bot, "settings", None)
+        if settings is not None:
+            default_prefix = getattr(settings, "default_prefix", default_prefix)
+
+        if ctx.guild is None:
+            return default_prefix
+
+        bridge = getattr(self.bot, "bridge", None)
+        if bridge is None:
+            return default_prefix
+
+        snapshot = await bridge.get_or_load_settings(ctx.guild.id)
+        return snapshot.prefix or default_prefix
+
+    @commands.command(name="help")
+    async def help_command(self, ctx: commands.Context, *, category: str | None = None) -> None:
+        prefix = await self._resolved_prefix(ctx)
+        all_commands = sorted(self.bot.commands, key=lambda command: command.name)
+
+        if category is None:
+            regular_lines: list[str] = []
+            group_lines: list[str] = []
+            for command in all_commands:
+                if command.hidden:
+                    continue
+                if isinstance(command, commands.Group):
+                    subcommands = ", ".join(
+                        sorted(subcommand.name for subcommand in command.commands)
+                    )
+                    group_lines.append(
+                        f"- `{prefix}{command.name} <subcommand>` ({subcommands})"
+                    )
+                else:
+                    regular_lines.append(f"- `{prefix}{command.name}`")
+
+            description = (
+                f"Use `{prefix}help <category>` to view subcommands or usage details.\n"
+                f"Current prefix: `{prefix}`"
+            )
+            embed = build_standard_embed(description, title="Command Help")
+            embed.add_field(
+                name="Core Commands",
+                value="\n".join(regular_lines) or "- None",
+                inline=False,
+            )
+            embed.add_field(
+                name="Command Categories",
+                value="\n".join(group_lines) or "- None",
+                inline=False,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        command = self.bot.get_command(category.lower())
+        if command is None or command.hidden:
+            await ctx.send(
+                embed=build_standard_embed(
+                    f"Unknown category `{category}`. Try `{prefix}help`.",
+                    title="Command Help",
+                )
+            )
+            return
+
+        if isinstance(command, commands.Group):
+            sub_lines = [
+                f"- `{prefix}{command.name} {subcommand.name}`"
+                for subcommand in sorted(command.commands, key=lambda c: c.name)
+                if not subcommand.hidden
+            ]
+            embed = build_standard_embed(
+                f"Subcommands for `{command.name}`:",
+                title=f"{command.name.title()} Help",
+            )
+            embed.add_field(
+                name="Subcommands",
+                value="\n".join(sub_lines) or "- None",
+                inline=False,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        await ctx.send(
+            embed=build_standard_embed(
+                f"Usage: `{prefix}{command.qualified_name}`",
+                title=f"{command.name.title()} Help",
+            )
+        )
+
+
     @commands.command(name="settings")
     async def settings(self, ctx: commands.Context) -> None:
         cog = self._require_cog("AdminCog")

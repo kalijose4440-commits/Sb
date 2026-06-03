@@ -7,7 +7,12 @@ import disnake
 from disnake.ext import commands
 
 from bot.core.error_hints import classify_command_error
-from bot.core.i18n import normalize_language, supported_languages_display, t
+from bot.core.i18n import (
+    help_command_for_language,
+    normalize_language,
+    supported_languages_display,
+    t,
+)
 from bot.core.prefix_adapter import PrefixInteractionAdapter
 from bot.core.response_style import build_standard_embed
 from bot.db.repositories import GuildSettingsRepository
@@ -79,7 +84,10 @@ class PrefixBridgeCog(commands.Cog):
             return normalize_language(default_language)
 
 
-    @commands.command(name="help")
+    @commands.command(
+        name="help",
+        aliases=["ayuda", "aide", "hilfe", "pomosh", "pomoc"],
+    )
     async def help_command(self, ctx: commands.Context, *, category: str | None = None) -> None:
         prefix = await self._resolved_prefix(ctx)
         language = await self._resolved_language(ctx)
@@ -178,9 +186,16 @@ class PrefixBridgeCog(commands.Cog):
     @commands.group(name="language", invoke_without_command=True)
     async def language_group(self, ctx: commands.Context) -> None:
         language = await self._resolved_language(ctx)
+        prefix = await self._resolved_prefix(ctx)
         await ctx.send(
             embed=build_standard_embed(
-                t(language, "language.current", language=language),
+                t(
+                    language,
+                    "language.current",
+                    language=language,
+                    prefix=prefix,
+                    help_command=help_command_for_language(language),
+                ),
                 title="Language",
             )
         )
@@ -188,9 +203,16 @@ class PrefixBridgeCog(commands.Cog):
     @language_group.command(name="status")
     async def language_status(self, ctx: commands.Context) -> None:
         language = await self._resolved_language(ctx)
+        prefix = await self._resolved_prefix(ctx)
         await ctx.send(
             embed=build_standard_embed(
-                t(language, "language.current", language=language),
+                t(
+                    language,
+                    "language.current",
+                    language=language,
+                    prefix=prefix,
+                    help_command=help_command_for_language(language),
+                ),
                 title="Language",
             )
         )
@@ -244,9 +266,16 @@ class PrefixBridgeCog(commands.Cog):
             await session.commit()
 
         await bridge.publish_language_change(ctx.guild.id, normalized)
+        prefix = await self._resolved_prefix(ctx)
         await ctx.send(
             embed=build_standard_embed(
-                t(normalized, "language.updated", language=normalized),
+                t(
+                    normalized,
+                    "language.updated",
+                    language=normalized,
+                    prefix=prefix,
+                    help_command=help_command_for_language(normalized),
+                ),
                 title="Language",
             )
         )

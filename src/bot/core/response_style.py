@@ -12,7 +12,7 @@ _PATCH_INSTALLED = False
 def build_standard_embed(
     description: str,
     *,
-    title: str = "Sb Bot",
+    title: str = "ODF 1.0",
     color: disnake.Color | None = None,
 ) -> disnake.Embed:
     """Build a polished default embed used for bot command responses."""
@@ -20,10 +20,9 @@ def build_standard_embed(
     embed = disnake.Embed(
         title=title,
         description=description,
-        color=color or disnake.Color.blurple(),
+        color=color or disnake.Color.dark_blue(),
         timestamp=datetime.now(UTC),
     )
-    embed.set_footer(text="Sb Premium Bot")
     return embed
 
 

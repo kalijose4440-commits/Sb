@@ -39,8 +39,17 @@ class PrefixBridgeCog(commands.Cog):
         if bridge is None:
             return default_prefix
 
-        snapshot = await bridge.get_or_load_settings(ctx.guild.id)
-        return snapshot.prefix or default_prefix
+        try:
+            snapshot = await bridge.get_or_load_settings(ctx.guild.id)
+            return snapshot.prefix or default_prefix
+        except Exception:
+            logger = getattr(self.bot, "logger", None)
+            if logger is not None:
+                logger.exception(
+                    "help_prefix_resolution_failed",
+                    extra={"guild_id": ctx.guild.id, "fallback_prefix": default_prefix},
+                )
+            return default_prefix
 
     @commands.command(name="help")
     async def help_command(self, ctx: commands.Context, *, category: str | None = None) -> None:
@@ -85,6 +94,10 @@ class PrefixBridgeCog(commands.Cog):
                 )
                 if examples:
                     value += f"\nExamples: {examples}"
+                value += (
+                    f"\nQuick fix: run `{prefix}help {group.name}` "
+                    "for argument format and checks."
+                )
                 embed.add_field(name=group.name.title(), value=value, inline=False)
 
             await ctx.send(embed=embed)

@@ -100,6 +100,9 @@ def classify_command_error(
     return CommandErrorHint(
         title="Unexpected Command Error",
         reason=f"Unhandled error type `{type(error).__name__}`.",
-        possible_fix="Retry once. If the issue persists, use `help` and report the failing command.",
+        possible_fix=(
+            "Retry once. If the issue persists, use `help` and report the failing "
+            "command."
+        ),
         severity="error",
     )

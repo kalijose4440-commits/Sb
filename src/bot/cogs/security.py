@@ -10,6 +10,7 @@ from disnake.interactions.application_command import ApplicationCommandInteracti
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.cogs.base_cog import BaseCog
+from bot.core.response_style import build_standard_embed
 from bot.core.security import should_emit_alert, update_join_window, utc_now
 from bot.db.repositories import RaidProtectionRepository
 
@@ -203,13 +204,12 @@ class SecurityCog(BaseCog):
 
         alert_channel = self._resolve_alert_channel(guild, config.alert_channel_id)
         if alert_channel is not None:
-            embed = disnake.Embed(
-                title="Security alert: join burst detected",
-                description=(
+            embed = build_standard_embed(
+                (
                     f"Detected **{join_count} joins** in the last **{config.window_seconds}s**.\n"
                     "Review new accounts and consider temporary gatekeeping."
                 ),
-                color=disnake.Color.red(),
+                title="Security alert: join burst detected",
             )
             embed.add_field(name="Threshold", value=str(config.join_threshold), inline=True)
             embed.add_field(name="Newest member", value=member.mention, inline=True)

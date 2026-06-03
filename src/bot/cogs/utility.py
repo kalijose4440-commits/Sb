@@ -8,6 +8,7 @@ from disnake.ext import commands
 from disnake.interactions.application_command import ApplicationCommandInteraction
 
 from bot.cogs.base_cog import BaseCog
+from bot.core.response_style import build_standard_embed
 
 
 def format_uptime(started_at: datetime, now: datetime | None = None) -> str:
@@ -45,7 +46,7 @@ class UtilityCog(BaseCog):
         started_at = getattr(self.bot, "started_at", datetime.now(UTC))
         uptime = format_uptime(started_at)
 
-        embed = disnake.Embed(title="Bot Information", color=disnake.Color.blurple())
+        embed = build_standard_embed("Runtime information for this bot.", title="Bot Information")
         embed.add_field(name="Guilds", value=str(guilds), inline=True)
         embed.add_field(name="Members", value=str(members), inline=True)
         embed.add_field(name="Latency", value=f"{round(self.bot.latency * 1000)}ms", inline=True)
@@ -66,7 +67,7 @@ class UtilityCog(BaseCog):
 
         guild = interaction.guild
         created = disnake.utils.format_dt(guild.created_at, style="R")
-        embed = disnake.Embed(title=f"{guild.name}", color=disnake.Color.green())
+        embed = build_standard_embed("Server summary details.", title=f"{guild.name}")
         owner_mention = guild.owner.mention if guild.owner else "Unknown"
         embed.add_field(name="Owner", value=owner_mention, inline=True)
         embed.add_field(name="Members", value=str(guild.member_count or 0), inline=True)
@@ -107,7 +108,7 @@ class UtilityCog(BaseCog):
         )
         created = disnake.utils.format_dt(target.created_at, style="R")
 
-        embed = disnake.Embed(title=f"User: {target}", color=disnake.Color.orange())
+        embed = build_standard_embed("Member profile details.", title=f"User: {target}")
         embed.add_field(name="ID", value=str(target.id), inline=True)
         embed.add_field(name="Top Role", value=target.top_role.mention, inline=True)
         embed.add_field(name="Created", value=created, inline=False)

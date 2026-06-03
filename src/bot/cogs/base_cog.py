@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.api.schemas import GuildSettingsRead
 from bot.bridge.state import BridgeState, GuildSettingsSnapshot
+from bot.core.response_style import build_standard_embed
 from bot.db.repositories import GuildSettingsRepository
 
 
@@ -94,10 +95,9 @@ class BaseCog(commands.Cog):
 
         prefix_lines = "\n".join(f"- `{prefix}{example}`" for example in prefix_examples)
 
-        embed = disnake.Embed(
+        embed = build_standard_embed(
+            "Pick one of the subcommands below.",
             title=f"{group_name.title()} commands",
-            description="Pick one of the subcommands below.",
-            color=disnake.Color.blurple(),
         )
         bot_settings = cast(Any, self.bot).settings
         if getattr(bot_settings, "enable_slash_commands", False):

@@ -91,6 +91,47 @@ def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:
             return
         await bot.process_commands(message)
 
+    @bot.event
+    async def on_command(ctx: commands.Context) -> None:
+        command_name = ctx.command.qualified_name if ctx.command is not None else "unknown"
+        bot.logger.info(
+            "prefix_command_received",
+            extra={
+                "command_name": command_name,
+                "guild_id": ctx.guild.id if ctx.guild is not None else None,
+                "channel_id": ctx.channel.id if ctx.channel is not None else None,
+                "user_id": ctx.author.id if ctx.author is not None else None,
+            },
+        )
+
+    @bot.event
+    async def on_command_completion(ctx: commands.Context) -> None:
+        command_name = ctx.command.qualified_name if ctx.command is not None else "unknown"
+        bot.logger.info(
+            "prefix_command_completed",
+            extra={
+                "command_name": command_name,
+                "guild_id": ctx.guild.id if ctx.guild is not None else None,
+                "channel_id": ctx.channel.id if ctx.channel is not None else None,
+                "user_id": ctx.author.id if ctx.author is not None else None,
+            },
+        )
+
+    @bot.event
+    async def on_command_error(ctx: commands.Context, error: commands.CommandError) -> None:
+        command_name = ctx.command.qualified_name if ctx.command is not None else "unknown"
+        bot.logger.exception(
+            "prefix_command_error",
+            extra={
+                "command_name": command_name,
+                "guild_id": ctx.guild.id if ctx.guild is not None else None,
+                "channel_id": ctx.channel.id if ctx.channel is not None else None,
+                "user_id": ctx.author.id if ctx.author is not None else None,
+                "error_type": type(error).__name__,
+            },
+            exc_info=error,
+        )
+
     return bot
 
 

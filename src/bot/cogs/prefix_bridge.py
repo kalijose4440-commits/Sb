@@ -6,6 +6,7 @@ from typing import Any
 import disnake
 from disnake.ext import commands
 
+from bot.core.error_hints import classify_command_error
 from bot.core.prefix_adapter import PrefixInteractionAdapter
 from bot.core.response_style import build_standard_embed
 
@@ -134,35 +135,31 @@ class PrefixBridgeCog(commands.Cog):
         ctx: commands.Context,
         error: commands.CommandError,
     ) -> None:
-        if ctx.command is None or ctx.command.cog is not self:
+        if ctx.command is not None and ctx.command.cog is not self:
             return
 
         prefix = await self._resolved_prefix(ctx)
-        message: str | None = None
-        title = "Command Error"
+        command_name = ctx.command.qualified_name if ctx.command is not None else None
+        hint = classify_command_error(error, prefix=prefix, command_name=command_name)
+        embed = build_standard_embed(hint.reason, title=hint.title)
+        embed.add_field(name="Possible fix", value=hint.possible_fix, inline=False)
 
-        if isinstance(error, commands.CommandNotFound):
-            message = f"Unknown command. Use `{prefix}help` to see all commands."
-        elif isinstance(error, commands.MissingPermissions):
-            missing = ", ".join(error.missing_permissions)
-            message = f"You are missing permissions for this command: `{missing}`."
-        elif isinstance(error, commands.BotMissingPermissions):
-            missing = ", ".join(error.missing_permissions)
-            message = f"I am missing required permissions: `{missing}`."
-        elif isinstance(error, commands.MissingRequiredArgument):
-            message = f"Missing argument `{error.param.name}`. Use `{prefix}help` for usage."
-        elif isinstance(error, commands.BadArgument):
-            message = f"Invalid argument. Use `{prefix}help` for the expected format."
-        elif isinstance(error, commands.CheckFailure):
-            message = "You do not meet the requirements to run that command."
-        else:
-            title = "Unexpected Error"
-            message = "Something went wrong while running that command."
-            if hasattr(self.bot, "logger"):
-                self.bot.logger.exception("prefix_command_failed", exc_info=error)
+        logger = getattr(self.bot, "logger", None)
+        if logger is not None:
+            log_payload = {
+                "category": hint.title,
+                "severity": hint.severity,
+                "command_name": command_name or "unknown",
+                "guild_id": ctx.guild.id if ctx.guild is not None else None,
+                "channel_id": ctx.channel.id if ctx.channel is not None else None,
+                "user_id": ctx.author.id if ctx.author is not None else None,
+            }
+            if hint.severity == "error":
+                logger.exception("prefix_command_failed", extra=log_payload, exc_info=error)
+            else:
+                logger.warning("prefix_command_rejected", extra=log_payload)
 
-        if message is not None:
-            await ctx.send(embed=build_standard_embed(message, title=title))
+        await ctx.send(embed=embed)
 
 
     @commands.command(name="settings")

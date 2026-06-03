@@ -1,10 +1,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from disnake.ext import commands
 
 from bot.core.response_style import build_standard_embed
+
+_UNSUPPORTED_PREFIX_KWARGS = {
+    "ephemeral",
+}
+
+
+def _sanitize_prefix_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
+    """Remove interaction-only kwargs before proxying to prefix send APIs."""
+
+    payload = dict(kwargs)
+    for key in _UNSUPPORTED_PREFIX_KWARGS:
+        payload.pop(key, None)
+    return payload
 
 
 @dataclass(slots=True)
@@ -12,7 +26,7 @@ class PrefixFollowupAdapter:
     ctx: commands.Context
 
     async def send(self, content: str | None = None, **kwargs):
-        payload = dict(kwargs)
+        payload = _sanitize_prefix_kwargs(kwargs)
         if content is not None and "embed" not in payload and "embeds" not in payload:
             payload["embed"] = build_standard_embed(str(content))
             content = None
@@ -28,7 +42,7 @@ class PrefixResponseAdapter:
         return self._done
 
     async def send_message(self, content: str | None = None, **kwargs):
-        payload = dict(kwargs)
+        payload = _sanitize_prefix_kwargs(kwargs)
         if content is not None and "embed" not in payload and "embeds" not in payload:
             payload["embed"] = build_standard_embed(str(content))
             content = None
@@ -77,7 +91,7 @@ class PrefixInteractionAdapter:
         return None
 
     async def edit_original_response(self, content: str | None = None, **kwargs):
-        payload = dict(kwargs)
+        payload = _sanitize_prefix_kwargs(kwargs)
         if content is not None and "embed" not in payload and "embeds" not in payload:
             payload["embed"] = build_standard_embed(str(content))
             content = None

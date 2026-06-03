@@ -45,46 +45,59 @@ class PrefixBridgeCog(commands.Cog):
     async def help_command(self, ctx: commands.Context, *, category: str | None = None) -> None:
         prefix = await self._resolved_prefix(ctx)
         all_commands = sorted(self.bot.commands, key=lambda command: command.name)
+        group_commands = [
+            command
+            for command in all_commands
+            if isinstance(command, commands.Group) and not command.hidden
+        ]
+        regular_commands = [
+            command
+            for command in all_commands
+            if not isinstance(command, commands.Group) and not command.hidden
+        ]
 
         if category is None:
-            regular_lines: list[str] = []
-            group_lines: list[str] = []
-            for command in all_commands:
-                if command.hidden:
-                    continue
-                if isinstance(command, commands.Group):
-                    subcommands = ", ".join(
-                        sorted(subcommand.name for subcommand in command.commands)
-                    )
-                    group_lines.append(
-                        f"- `{prefix}{command.name} <subcommand>` ({subcommands})"
-                    )
-                else:
-                    regular_lines.append(f"- `{prefix}{command.name}`")
-
-            description = (
-                f"Use `{prefix}help <category>` to view subcommands or usage details.\n"
-                f"Current prefix: `{prefix}`"
+            embed = build_standard_embed(
+                (
+                    f"Current prefix: `{prefix}`\n"
+                    f"Use `{prefix}help <category>` for detailed subcommand usage."
+                ),
+                title="Command Dashboard",
             )
-            embed = build_standard_embed(description, title="Command Help")
             embed.add_field(
                 name="Core Commands",
-                value="\n".join(regular_lines) or "- None",
+                value="\n".join(f"- `{prefix}{command.name}`" for command in regular_commands)
+                or "- None",
                 inline=False,
             )
-            embed.add_field(
-                name="Command Categories",
-                value="\n".join(group_lines) or "- None",
-                inline=False,
-            )
+
+            for group in group_commands:
+                subs = sorted(
+                    subcommand.name
+                    for subcommand in group.commands
+                    if not subcommand.hidden
+                )
+                examples = ", ".join(f"`{prefix}{group.name} {name}`" for name in subs[:2])
+                value = (
+                    f"Use `{prefix}{group.name} <subcommand>`\n"
+                    f"Subcommands: {', '.join(subs) if subs else 'none'}"
+                )
+                if examples:
+                    value += f"\nExamples: {examples}"
+                embed.add_field(name=group.name.title(), value=value, inline=False)
+
             await ctx.send(embed=embed)
             return
 
         command = self.bot.get_command(category.lower())
         if command is None or command.hidden:
+            category_names = ", ".join(group.name for group in group_commands)
             await ctx.send(
                 embed=build_standard_embed(
-                    f"Unknown category `{category}`. Try `{prefix}help`.",
+                    (
+                        f"Unknown category `{category}`.\n"
+                        f"Available categories: {category_names}"
+                    ),
                     title="Command Help",
                 )
             )
@@ -97,8 +110,8 @@ class PrefixBridgeCog(commands.Cog):
                 if not subcommand.hidden
             ]
             embed = build_standard_embed(
-                f"Subcommands for `{command.name}`:",
-                title=f"{command.name.title()} Help",
+                f"Detailed subcommands for `{command.name}`.",
+                title=f"{command.name.title()} Category",
             )
             embed.add_field(
                 name="Subcommands",
@@ -111,9 +124,45 @@ class PrefixBridgeCog(commands.Cog):
         await ctx.send(
             embed=build_standard_embed(
                 f"Usage: `{prefix}{command.qualified_name}`",
-                title=f"{command.name.title()} Help",
+                title=f"{command.name.title()} Command",
             )
         )
+
+    @commands.Cog.listener("on_command_error")
+    async def handle_prefix_command_error(
+        self,
+        ctx: commands.Context,
+        error: commands.CommandError,
+    ) -> None:
+        if ctx.command is None or ctx.command.cog is not self:
+            return
+
+        prefix = await self._resolved_prefix(ctx)
+        message: str | None = None
+        title = "Command Error"
+
+        if isinstance(error, commands.CommandNotFound):
+            message = f"Unknown command. Use `{prefix}help` to see all commands."
+        elif isinstance(error, commands.MissingPermissions):
+            missing = ", ".join(error.missing_permissions)
+            message = f"You are missing permissions for this command: `{missing}`."
+        elif isinstance(error, commands.BotMissingPermissions):
+            missing = ", ".join(error.missing_permissions)
+            message = f"I am missing required permissions: `{missing}`."
+        elif isinstance(error, commands.MissingRequiredArgument):
+            message = f"Missing argument `{error.param.name}`. Use `{prefix}help` for usage."
+        elif isinstance(error, commands.BadArgument):
+            message = f"Invalid argument. Use `{prefix}help` for the expected format."
+        elif isinstance(error, commands.CheckFailure):
+            message = "You do not meet the requirements to run that command."
+        else:
+            title = "Unexpected Error"
+            message = "Something went wrong while running that command."
+            if hasattr(self.bot, "logger"):
+                self.bot.logger.exception("prefix_command_failed", exc_info=error)
+
+        if message is not None:
+            await ctx.send(embed=build_standard_embed(message, title=title))
 
 
     @commands.command(name="settings")

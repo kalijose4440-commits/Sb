@@ -84,7 +84,7 @@ def supported_languages_display() -> str:
     return ", ".join(SUPPORTED_LANGUAGES)
 
 
-def t(language: str | None, key: str, **kwargs: object) -> str:
-    normalized = normalize_language(language)
+def t(locale: str | None, key: str, **kwargs: object) -> str:
+    normalized = normalize_language(locale)
     template = _MESSAGES.get(normalized, _MESSAGES["en"]).get(key, _MESSAGES["en"].get(key, key))
     return template.format(**kwargs)

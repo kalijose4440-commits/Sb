@@ -20,7 +20,7 @@ def build_standard_embed(
     embed = disnake.Embed(
         title=title,
         description=description,
-        color=color or disnake.Color.dark_blue(),
+        color=color or disnake.Color.from_rgb(0, 0, 0),
         timestamp=datetime.now(UTC),
     )
     return embed

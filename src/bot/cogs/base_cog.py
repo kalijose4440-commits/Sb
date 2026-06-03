@@ -41,6 +41,7 @@ class BaseCog(commands.Cog):
                 default_language=self.bridge.default_language,
             )
             await session.commit()
+            await session.refresh(row)
 
         await self.bridge.publish_prefix_change(guild_id=guild_id, prefix=row.prefix)
         await self.bridge.publish_status_change(guild_id=guild_id, status=row.status)
@@ -59,6 +60,7 @@ class BaseCog(commands.Cog):
                 default_language=self.bridge.default_language,
             )
             await session.commit()
+            await session.refresh(row)
 
         await self.bridge.publish_prefix_change(guild_id=guild_id, prefix=prefix)
         return GuildSettingsRead.model_validate(row, from_attributes=True)
@@ -75,6 +77,7 @@ class BaseCog(commands.Cog):
                 default_language=self.bridge.default_language,
             )
             await session.commit()
+            await session.refresh(row)
 
         await self.bridge.publish_status_change(guild_id=guild_id, status=status)
         return GuildSettingsRead.model_validate(row, from_attributes=True)

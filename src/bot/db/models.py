@@ -202,6 +202,23 @@ class RaidProtectionConfig(Base):
     )
 
 
+class MusicConfig(Base):
+    """Guild-level defaults for music playback behavior."""
+
+    __tablename__ = "music_configs"
+
+    guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    default_volume: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
+    autoplay: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    max_queue_size: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class CommandAclEntry(Base):
     """Role-based allow-list rules for slash command execution."""
 

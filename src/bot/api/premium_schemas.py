@@ -150,3 +150,20 @@ class AclRuleRead(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+
+class MusicConfigUpdate(BaseModel):
+    default_volume: int | None = Field(default=None, ge=1, le=200)
+    autoplay: bool | None = None
+    max_queue_size: int | None = Field(default=None, ge=1, le=500)
+
+
+class MusicConfigRead(BaseModel):
+    guild_id: int
+    default_volume: int
+    autoplay: bool
+    max_queue_size: int
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

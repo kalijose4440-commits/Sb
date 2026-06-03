@@ -34,12 +34,19 @@ You can keep `DISCORD_TOKEN` as a placeholder until you are ready to launch.
 - `/serverinfo`
 - `/userinfo`
 - `/runtime`
+- `/avatar`
+- `/poll`
 
 ### Moderation
 - `/purge`
 - `/kick`
 - `/ban`
+- `/tempban`
 - `/unban`
+- `/timeout`
+- `/untimeout`
+- `/warn`
+- `/warnings`
 
 ### Premium: Welcome
 - `/welcome status`
@@ -54,6 +61,7 @@ You can keep `DISCORD_TOKEN` as a placeholder until you are ready to launch.
 - `/security configure`
 - `/security enable`
 - `/security disable`
+- `/security antinuke`
 
 `/security configure` supports automated mitigation actions:
 - `none`
@@ -98,6 +106,23 @@ Ticket close/transcript can generate and persist transcript snapshots.
 - `/analytics topcommands`
 - `/analytics topusers`
 
+### Premium: Music
+- `/music join`
+- `/music play`
+- `/music pause`
+- `/music resume`
+- `/music skip`
+- `/music stop`
+- `/music queue`
+- `/music volume`
+- `/music nowplaying`
+- `/music leave`
+
+### Prefix + Language
+- Prefix-first mode is enabled by default (`!`) and per-guild custom prefixes are supported.
+- Use `!language status` and `!language set <en|es|fr|de|ru>` to manage localized command responses per server.
+- Default server language can be set via `DEFAULT_LANGUAGE` in `.env`.
+
 ## Rich Presence
 
 Configured via `PRESENCE_TEMPLATES` and `PRESENCE_ROTATION_SECONDS`.
@@ -134,6 +159,7 @@ watching::{users} members::idle
 - `GET /api/v1/premium/{guild_id}/tickets/{ticket_id}/transcripts`
 - `GET/PATCH /api/v1/premium/{guild_id}/welcome`
 - `GET/PATCH /api/v1/premium/{guild_id}/security`
+- `GET/PATCH /api/v1/premium/{guild_id}/music`
 - `GET/POST/DELETE /api/v1/premium/{guild_id}/acl`
 
 ## Quality Workflow
@@ -150,3 +176,10 @@ make check
 ```bash
 docker compose -f docker/docker-compose.yml up --build
 ```
+
+
+## Troubleshooting
+
+- If prefix commands appear to fail silently, verify `ENABLE_MESSAGE_CONTENT_INTENT=true` and that the intent is enabled in the Discord Developer Portal.
+- Command errors are reported back to users with a probable cause and a suggested fix; also check structured console logs for `prefix_command_error` and `prefix_command_failed`.
+- If language or prefix values seem stale, call `GET /api/v1/settings/{guild_id}` to inspect current persisted settings.

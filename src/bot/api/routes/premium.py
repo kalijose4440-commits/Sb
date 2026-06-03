@@ -13,6 +13,8 @@ from bot.api.premium_schemas import (
     AnnouncementToggle,
     AutoModKeywordCreate,
     AutoModKeywordRead,
+    MusicConfigRead,
+    MusicConfigUpdate,
     RaidProtectionConfigRead,
     RaidProtectionConfigUpdate,
     ReactionRoleCreate,
@@ -27,6 +29,7 @@ from bot.db.repositories import (
     AnnouncementRepository,
     AutoModRepository,
     CommandAclRepository,
+    MusicConfigRepository,
     RaidProtectionRepository,
     ReactionRoleRepository,
     TicketRepository,
@@ -289,6 +292,41 @@ async def patch_security_config(
         await session.commit()
         await session.refresh(row)
         response = RaidProtectionConfigRead.model_validate(row, from_attributes=True)
+    return response
+
+
+@router.get("/{guild_id}/music", response_model=MusicConfigRead)
+async def get_music_config(guild_id: int, request: Request) -> MusicConfigRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = MusicConfigRepository(session)
+        row = await repository.get_config(guild_id)
+        if row is None:
+            row = await repository.upsert_config(guild_id)
+            await session.commit()
+        await session.refresh(row)
+        response = MusicConfigRead.model_validate(row, from_attributes=True)
+    return response
+
+
+@router.patch("/{guild_id}/music", response_model=MusicConfigRead)
+async def patch_music_config(
+    guild_id: int,
+    payload: MusicConfigUpdate,
+    request: Request,
+) -> MusicConfigRead:
+    session_factory = _session_factory_from_request(request)
+    async with session_factory() as session:
+        repository = MusicConfigRepository(session)
+        row = await repository.upsert_config(
+            guild_id,
+            default_volume=payload.default_volume,
+            autoplay=payload.autoplay,
+            max_queue_size=payload.max_queue_size,
+        )
+        await session.commit()
+        await session.refresh(row)
+        response = MusicConfigRead.model_validate(row, from_attributes=True)
     return response
 
 

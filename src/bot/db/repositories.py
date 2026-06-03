@@ -11,6 +11,7 @@ from bot.db.models import (
     CommandAclEntry,
     CommandUsageMetric,
     GuildSettings,
+    MusicConfig,
     RaidProtectionConfig,
     ReactionRoleBinding,
     ScheduledAnnouncement,
@@ -655,6 +656,46 @@ class RaidProtectionRepository:
         )
         result = await self._session.execute(statement)
         return list(result.scalars().all())
+
+
+class MusicConfigRepository:
+    """CRUD access for guild-level music defaults."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_config(self, guild_id: int) -> MusicConfig | None:
+        statement = select(MusicConfig).where(MusicConfig.guild_id == guild_id)
+        result = await self._session.execute(statement)
+        return result.scalar_one_or_none()
+
+    async def upsert_config(
+        self,
+        guild_id: int,
+        *,
+        default_volume: int | None = None,
+        autoplay: bool | None = None,
+        max_queue_size: int | None = None,
+    ) -> MusicConfig:
+        row = await self.get_config(guild_id)
+        if row is None:
+            row = MusicConfig(
+                guild_id=guild_id,
+                default_volume=default_volume if default_volume is not None else 50,
+                autoplay=autoplay if autoplay is not None else False,
+                max_queue_size=max_queue_size if max_queue_size is not None else 100,
+            )
+            self._session.add(row)
+        else:
+            if default_volume is not None:
+                row.default_volume = default_volume
+            if autoplay is not None:
+                row.autoplay = autoplay
+            if max_queue_size is not None:
+                row.max_queue_size = max_queue_size
+
+        await self._session.flush()
+        return row
 
 
 class CommandAclRepository:

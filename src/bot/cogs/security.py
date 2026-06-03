@@ -247,7 +247,11 @@ class SecurityCog(BaseCog):
             await session.commit()
 
     @commands.Cog.listener("on_member_ban")
-    async def on_member_ban(self, guild: disnake.Guild, _user: disnake.User | disnake.Member) -> None:
+    async def on_member_ban(
+        self,
+        guild: disnake.Guild,
+        _user: disnake.User | disnake.Member,
+    ) -> None:
         await self._check_mass_action(guild, action="member_ban")
 
     @commands.Cog.listener("on_guild_channel_delete")
@@ -258,7 +262,11 @@ class SecurityCog(BaseCog):
         if not self._anti_nuke_enabled[guild.id]:
             return
 
-        window = self._ban_windows[guild.id] if action == "member_ban" else self._channel_delete_windows[guild.id]
+        window = (
+            self._ban_windows[guild.id]
+            if action == "member_ban"
+            else self._channel_delete_windows[guild.id]
+        )
         now = utc_now()
         count = update_join_window(window, now, window_seconds=20)
         if count < 3:
@@ -276,8 +284,7 @@ class SecurityCog(BaseCog):
         if alert_channel is not None:
             embed = build_standard_embed(
                 (
-                    f"Detected burst `{action}` activity: **{count}** events in 20s.
-"
+                    f"Detected burst `{action}` activity: **{count}** events in 20s.\n"
                     "Automatic mitigation flow has been evaluated."
                 ),
                 title="Security alert: anti-nuke trigger",

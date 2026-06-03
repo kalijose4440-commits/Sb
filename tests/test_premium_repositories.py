@@ -9,6 +9,7 @@ from bot.db.repositories import (
     AnnouncementRepository,
     AutoModRepository,
     CommandAclRepository,
+    MusicConfigRepository,
     RaidProtectionRepository,
     ReactionRoleRepository,
     TicketRepository,
@@ -31,6 +32,7 @@ async def test_premium_repositories_round_trip(tmp_path) -> None:
         analytics_repo = AnalyticsRepository(session)
         welcome_repo = WelcomeRepository(session)
         raid_repo = RaidProtectionRepository(session)
+        music_repo = MusicConfigRepository(session)
         acl_repo = CommandAclRepository(session)
 
         rule = await automod.add_keyword(guild_id=1, keyword="spoiler", action="delete")
@@ -121,6 +123,17 @@ async def test_premium_repositories_round_trip(tmp_path) -> None:
 
         await raid_repo.mark_triggered(guild_id=1, triggered_at=datetime.now(UTC))
         assert (await raid_repo.get_config(1)).last_triggered_at is not None
+
+
+        music = await music_repo.upsert_config(
+            guild_id=1,
+            default_volume=75,
+            autoplay=True,
+            max_queue_size=180,
+        )
+        assert music.default_volume == 75
+        assert music.autoplay is True
+        assert music.max_queue_size == 180
 
         await acl_repo.allow_role(guild_id=1, command_name="ticket open", role_id=500)
         await acl_repo.allow_role(guild_id=1, command_name="ticket open", role_id=600)

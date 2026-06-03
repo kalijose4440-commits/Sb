@@ -65,11 +65,19 @@ class MusicCog(BaseCog):
             )
             return None
 
-        voice_client = interaction.guild.voice_client
-        if voice_client is None:
-            voice_client = await channel.connect()
-        elif voice_client.channel != channel:
-            await voice_client.move_to(channel)
+        voice_protocol = interaction.guild.voice_client
+        if voice_protocol is None:
+            voice_client = cast(disnake.VoiceClient, await channel.connect())
+        elif isinstance(voice_protocol, disnake.VoiceClient):
+            voice_client = voice_protocol
+            if voice_client.channel != channel:
+                await voice_client.move_to(channel)
+        else:
+            await interaction.response.send_message(
+                "Unsupported voice protocol is active for this guild.",
+                ephemeral=True,
+            )
+            return None
 
         return voice_client, self._state_for(interaction.guild_id)
 
@@ -147,8 +155,13 @@ class MusicCog(BaseCog):
         )
         state.queue.append(track)
 
-        if not voice_client.is_playing() and not voice_client.is_paused() and state.now_playing is None:
-            await self._play_next(interaction.guild, voice_client, state)
+        if (
+            not voice_client.is_playing()
+            and not voice_client.is_paused()
+            and state.now_playing is None
+        ):
+            if interaction.guild is not None:
+                await self._play_next(interaction.guild, voice_client, state)
 
         await interaction.response.send_message(
             f"Queued track: `{track.title}` (position `{len(state.queue)}`).",
@@ -190,6 +203,12 @@ class MusicCog(BaseCog):
         if interaction.guild is None or interaction.guild.voice_client is None:
             await interaction.response.send_message("Nothing is playing right now.", ephemeral=True)
             return
+        if not isinstance(interaction.guild.voice_client, disnake.VoiceClient):
+            await interaction.response.send_message(
+                "Unsupported voice protocol is active for this guild.",
+                ephemeral=True,
+            )
+            return
         voice_client = interaction.guild.voice_client
         if voice_client.is_playing():
             voice_client.pause()
@@ -201,6 +220,12 @@ class MusicCog(BaseCog):
     async def resume(self, interaction: ApplicationCommandInteraction) -> None:
         if interaction.guild is None or interaction.guild.voice_client is None:
             await interaction.response.send_message("Nothing is paused right now.", ephemeral=True)
+            return
+        if not isinstance(interaction.guild.voice_client, disnake.VoiceClient):
+            await interaction.response.send_message(
+                "Unsupported voice protocol is active for this guild.",
+                ephemeral=True,
+            )
             return
         voice_client = interaction.guild.voice_client
         if voice_client.is_paused():
@@ -219,7 +244,10 @@ class MusicCog(BaseCog):
             return
 
         voice_client = interaction.guild.voice_client
-        if voice_client is None or not (voice_client.is_playing() or voice_client.is_paused()):
+        if voice_client is None or not isinstance(voice_client, disnake.VoiceClient):
+            await interaction.response.send_message("No active track to skip.", ephemeral=True)
+            return
+        if not (voice_client.is_playing() or voice_client.is_paused()):
             await interaction.response.send_message("No active track to skip.", ephemeral=True)
             return
 
@@ -240,10 +268,15 @@ class MusicCog(BaseCog):
         state.now_playing = None
 
         voice_client = interaction.guild.voice_client
-        if voice_client is not None and (voice_client.is_playing() or voice_client.is_paused()):
+        if isinstance(voice_client, disnake.VoiceClient) and (
+            voice_client.is_playing() or voice_client.is_paused()
+        ):
             voice_client.stop()
 
-        await interaction.response.send_message("Stopped playback and cleared queue.", ephemeral=True)
+        await interaction.response.send_message(
+            "Stopped playback and cleared queue.",
+            ephemeral=True,
+        )
 
     @music.sub_command(name="queue", description="Show upcoming tracks")
     async def queue(self, interaction: ApplicationCommandInteraction) -> None:
@@ -284,7 +317,7 @@ class MusicCog(BaseCog):
         state.volume = percent / 100
 
         voice_client = interaction.guild.voice_client if interaction.guild is not None else None
-        if voice_client is not None and voice_client.source is not None:
+        if isinstance(voice_client, disnake.VoiceClient) and voice_client.source is not None:
             voice_source = cast(disnake.PCMVolumeTransformer, voice_client.source)
             voice_source.volume = state.volume
 
@@ -304,7 +337,10 @@ class MusicCog(BaseCog):
 
         state = self._state_for(interaction.guild_id)
         if state.now_playing is None:
-            await interaction.response.send_message("No track is currently playing.", ephemeral=True)
+            await interaction.response.send_message(
+                "No track is currently playing.",
+                ephemeral=True,
+            )
             return
 
         await interaction.response.send_message(

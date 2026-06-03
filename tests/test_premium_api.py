@@ -106,6 +106,19 @@ async def test_premium_api_routes_cover_core_workflows(tmp_path) -> None:
         assert patch_security.json()["join_threshold"] == 6
         assert patch_security.json()["mitigation_action"] == "verification_high"
 
+        get_music = await client.get("/api/v1/premium/42/music")
+        assert get_music.status_code == 200
+        assert get_music.json()["default_volume"] == 50
+
+        patch_music = await client.patch(
+            "/api/v1/premium/42/music",
+            json={"default_volume": 70, "autoplay": True, "max_queue_size": 250},
+        )
+        assert patch_music.status_code == 200
+        assert patch_music.json()["default_volume"] == 70
+        assert patch_music.json()["autoplay"] is True
+        assert patch_music.json()["max_queue_size"] == 250
+
         add_acl = await client.post(
             "/api/v1/premium/42/acl",
             json={"command_name": "ticket open", "role_id": 888},

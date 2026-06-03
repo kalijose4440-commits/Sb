@@ -116,7 +116,8 @@ class ModerationCog(commands.Cog):
             )
             return
 
-        await interaction.guild.ban(member, reason=f"{interaction.author}: {reason}")
+        guild = interaction.guild
+        await guild.ban(member, reason=f"{interaction.author}: {reason}")
         unban_at = datetime.now(UTC) + timedelta(minutes=duration_minutes)
 
         await interaction.response.send_message(
@@ -127,7 +128,7 @@ class ModerationCog(commands.Cog):
         async def _unban_later() -> None:
             await disnake.utils.sleep_until(unban_at)
             try:
-                await interaction.guild.unban(
+                await guild.unban(
                     disnake.Object(id=member.id),
                     reason="Temporary ban expired",
                 )
@@ -175,7 +176,7 @@ class ModerationCog(commands.Cog):
         reason: str = commands.Param(default="No reason provided", max_length=200),
     ) -> None:
         until = datetime.now(UTC) + timedelta(minutes=duration_minutes)
-        await member.timeout(until, reason=f"{interaction.author}: {reason}")
+        await member.timeout(until=until, reason=f"{interaction.author}: {reason}")
         await interaction.response.send_message(
             f"Timed out {member.mention} for `{duration_minutes}` minute(s).",
             ephemeral=True,
@@ -190,7 +191,7 @@ class ModerationCog(commands.Cog):
         member: disnake.Member,
         reason: str = commands.Param(default="No reason provided", max_length=200),
     ) -> None:
-        await member.timeout(None, reason=f"{interaction.author}: {reason}")
+        await member.timeout(until=None, reason=f"{interaction.author}: {reason}")
         await interaction.response.send_message(
             f"Removed timeout from {member.mention}.",
             ephemeral=True,
@@ -255,8 +256,7 @@ class ModerationCog(commands.Cog):
             for index, record in enumerate(records[-10:], start=1)
         ]
         await interaction.response.send_message(
-            "
-".join(lines),
+            "\n".join(lines),
             ephemeral=True,
         )
 

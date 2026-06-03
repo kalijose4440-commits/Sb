@@ -102,8 +102,7 @@ class PrefixBridgeCog(commands.Cog):
             )
             embed.add_field(
                 name="Core Commands",
-                value="
-".join(f"- `{prefix}{command.name}`" for command in regular_commands)
+                value="\n".join(f"- `{prefix}{command.name}`" for command in regular_commands)
                 or "- None",
                 inline=False,
             )
@@ -116,15 +115,12 @@ class PrefixBridgeCog(commands.Cog):
                 )
                 examples = ", ".join(f"`{prefix}{group.name} {name}`" for name in subs[:2])
                 value = (
-                    f"Use `{prefix}{group.name} <subcommand>`
-"
+                    f"Use `{prefix}{group.name} <subcommand>`\n"
                     f"Subcommands: {', '.join(subs) if subs else 'none'}"
                 )
                 if examples:
-                    value += f"
-Examples: {examples}"
-                value += "
-" + t(
+                    value += f"\nExamples: {examples}"
+                value += "\n" + t(
                     language,
                     "help.quick_fix",
                     prefix=prefix,
@@ -142,8 +138,7 @@ Examples: {examples}"
                 embed=build_standard_embed(
                     (
                         t(language, "help.unknown_category", category=category)
-                        + "
-"
+                        + "\n"
                         + t(language, "help.available_categories", categories=category_names)
                     ),
                     title="Command Help",
@@ -163,8 +158,7 @@ Examples: {examples}"
             )
             embed.add_field(
                 name="Subcommands",
-                value="
-".join(sub_lines) or "- None",
+                value="\n".join(sub_lines) or "- None",
                 inline=False,
             )
             await ctx.send(embed=embed)

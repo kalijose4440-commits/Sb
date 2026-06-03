@@ -91,6 +91,7 @@ class BaseCog(commands.Cog):
                 default_status=self.bridge.default_status,
             )
             await session.commit()
+            await session.refresh(row)
 
         await self.bridge.publish_language_change(guild_id=guild_id, language=language)
         return GuildSettingsRead.model_validate(row, from_attributes=True)

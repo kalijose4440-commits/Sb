@@ -39,5 +39,7 @@ def _ensure_guild_settings_language_column(connection) -> None:
     if "language" in columns:
         return
 
-    connection.execute(text("ALTER TABLE guild_settings ADD COLUMN language VARCHAR(8) NOT NULL DEFAULT 'en'"))
+    connection.execute(
+        text("ALTER TABLE guild_settings ADD COLUMN language VARCHAR(8) NOT NULL DEFAULT 'en'")
+    )
 

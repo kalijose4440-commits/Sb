@@ -91,56 +91,40 @@ class PrefixBridgeCog(commands.Cog):
     async def help_command(self, ctx: commands.Context, *, category: str | None = None) -> None:
         prefix = await self._resolved_prefix(ctx)
         language = await self._resolved_language(ctx)
-        all_commands = sorted(self.bot.commands, key=lambda command: command.name)
-        group_commands = [
-            command
-            for command in all_commands
-            if isinstance(command, commands.Group) and not command.hidden
-        ]
-        regular_commands = [
-            command
-            for command in all_commands
-            if not isinstance(command, commands.Group) and not command.hidden
-        ]
+        help_alias = help_command_for_language(language)
+        group_commands = sorted(
+            [
+                command
+                for command in self.bot.commands
+                if isinstance(command, commands.Group) and not command.hidden
+            ],
+            key=lambda command: command.name,
+        )
 
         if category is None:
+            category_lines = "\n".join(
+                f"- `{prefix}{group.name}`"
+                for group in group_commands
+            )
             embed = build_standard_embed(
-                t(language, "help.dashboard_intro", prefix=prefix),
-                title="Command Dashboard",
+                t(
+                    language,
+                    "help.dashboard_intro",
+                    prefix=prefix,
+                    help_command=help_alias,
+                ),
+                title="Command Categories",
             )
             embed.add_field(
-                name="Core Commands",
-                value="\n".join(f"- `{prefix}{command.name}`" for command in regular_commands)
-                or "- None",
+                name="Categories",
+                value=category_lines or "- None",
                 inline=False,
             )
-
-            for group in group_commands:
-                subs = sorted(
-                    subcommand.name
-                    for subcommand in group.commands
-                    if not subcommand.hidden
-                )
-                examples = ", ".join(f"`{prefix}{group.name} {name}`" for name in subs[:2])
-                value = (
-                    f"Use `{prefix}{group.name} <subcommand>`\n"
-                    f"Subcommands: {', '.join(subs) if subs else 'none'}"
-                )
-                if examples:
-                    value += f"\nExamples: {examples}"
-                value += "\n" + t(
-                    language,
-                    "help.quick_fix",
-                    prefix=prefix,
-                    category=group.name,
-                )
-                embed.add_field(name=group.name.title(), value=value, inline=False)
-
             await ctx.send(embed=embed)
             return
 
         command = self.bot.get_command(category.lower())
-        if command is None or command.hidden:
+        if command is None or command.hidden or not isinstance(command, commands.Group):
             category_names = ", ".join(group.name for group in group_commands)
             await ctx.send(
                 embed=build_standard_embed(
@@ -149,39 +133,26 @@ class PrefixBridgeCog(commands.Cog):
                         + "\n"
                         + t(language, "help.available_categories", categories=category_names)
                     ),
-                    title="Command Help",
+                    title="Command Categories",
                 )
             )
             return
 
-        if isinstance(command, commands.Group):
-            sub_lines = [
-                f"- `{prefix}{command.name} {subcommand.name}`"
-                for subcommand in sorted(command.commands, key=lambda c: c.name)
-                if not subcommand.hidden
-            ]
-            embed = build_standard_embed(
-                t(language, "help.subcommands_detail", command=command.name),
-                title=f"{command.name.title()} Category",
-            )
-            embed.add_field(
-                name="Subcommands",
-                value="\n".join(sub_lines) or "- None",
-                inline=False,
-            )
-            await ctx.send(embed=embed)
-            return
-
-        await ctx.send(
-            embed=build_standard_embed(
-                t(
-                    language,
-                    "help.command_usage",
-                    usage=f"{prefix}{command.qualified_name}",
-                ),
-                title=f"{command.name.title()} Command",
-            )
+        sub_lines = [
+            f"- `{prefix}{command.name} {subcommand.name}`"
+            for subcommand in sorted(command.commands, key=lambda c: c.name)
+            if not subcommand.hidden
+        ]
+        embed = build_standard_embed(
+            t(language, "help.subcommands_detail", command=command.name),
+            title=f"{command.name.title()} Category",
         )
+        embed.add_field(
+            name="Subcommands",
+            value="\n".join(sub_lines) or "- None",
+            inline=False,
+        )
+        await ctx.send(embed=embed)
 
     @commands.group(name="language", invoke_without_command=True)
     async def language_group(self, ctx: commands.Context) -> None:
@@ -537,6 +508,11 @@ class PrefixBridgeCog(commands.Cog):
     async def music_nowplaying(self, ctx: commands.Context) -> None:
         cog = self._require_cog("MusicCog")
         await cog.nowplaying(self._interaction(ctx))
+
+    @music_group.command(name="info")
+    async def music_info(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.info(self._interaction(ctx))
 
     @commands.group(name="welcome", invoke_without_command=True)
     async def welcome_group(self, ctx: commands.Context) -> None:

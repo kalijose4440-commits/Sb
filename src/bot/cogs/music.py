@@ -96,6 +96,7 @@ class MusicCog(BaseCog):
                 "music queue",
                 "music volume",
                 "music nowplaying",
+                "music info",
                 "music leave",
             ],
             prefix_examples=[
@@ -108,6 +109,7 @@ class MusicCog(BaseCog):
                 "music queue",
                 "music volume",
                 "music nowplaying",
+                "music info",
                 "music leave",
             ],
         )
@@ -345,6 +347,33 @@ class MusicCog(BaseCog):
 
         await interaction.response.send_message(
             f"Now playing: `{state.now_playing.title}`",
+            ephemeral=True,
+        )
+
+
+    @music.sub_command(name="info", description="Show current music engine state")
+    async def info(self, interaction: ApplicationCommandInteraction) -> None:
+        if interaction.guild_id is None:
+            await interaction.response.send_message(
+                "This command can only be used in a server.",
+                ephemeral=True,
+            )
+            return
+
+        state = self._state_for(interaction.guild_id)
+        voice_client = interaction.guild.voice_client if interaction.guild is not None else None
+        channel_name = "not connected"
+        if isinstance(voice_client, disnake.VoiceClient) and voice_client.channel is not None:
+            channel_name = str(voice_client.channel)
+
+        now_playing = state.now_playing.title if state.now_playing is not None else "none"
+        await interaction.response.send_message(
+            (
+                f"Channel: `{channel_name}`\n"
+                f"Now playing: `{now_playing}`\n"
+                f"Queued tracks: `{len(state.queue)}`\n"
+                f"Volume: `{int(state.volume * 100)}%`"
+            ),
             ephemeral=True,
         )
 

@@ -2,7 +2,7 @@
 
 Production-grade Discord bot scaffold with:
 
-- **Disnake** slash commands and modular Cog architecture
+- **Disnake** modular Cog architecture with prefix-first commands
 - **FastAPI** dashboard backend for real-time config
 - **PostgreSQL + async SQLAlchemy** persistence
 - **Premium automation modules** (welcome, security, ACL, tickets, automod, reaction roles, announcements, analytics)
@@ -107,21 +107,28 @@ Ticket close/transcript can generate and persist transcript snapshots.
 - `/analytics topusers`
 
 ### Premium: Music
-- `/music join`
-- `/music play`
-- `/music pause`
-- `/music resume`
-- `/music skip`
-- `/music stop`
-- `/music queue`
-- `/music volume`
-- `/music nowplaying`
-- `/music leave`
+- `!music join`
+- `!music play`
+- `!music pause`
+- `!music resume`
+- `!music skip`
+- `!music stop`
+- `!music queue`
+- `!music volume`
+- `!music nowplaying`
+- `!music info`
+- `!music leave`
 
 ### Prefix + Language
 - Prefix-first mode is enabled by default (`!`) and per-guild custom prefixes are supported.
 - Use `!language status` and `!language set <en|es|fr|de|ru>` to manage localized command responses per server.
 - Default server language can be set via `DEFAULT_LANGUAGE` in `.env`.
+
+### Advanced Prefix Categories (52 new subcommands)
+- `!math` category: 18 subcommands for arithmetic and calculator flows
+- `!text` category: 18 subcommands for string transformation and analysis
+- `!tools` category: 16 subcommands for randomizers, encoding, hashes, UUID/time, and JSON formatting
+- `!help` now shows only category tiles (no command examples) for a clean tactical overview
 
 ## Rich Presence
 

@@ -47,6 +47,7 @@ class Settings(BaseSettings):
         "bot.cogs.announcements",
         "bot.cogs.analytics",
         "bot.cogs.music",
+        "bot.cogs.advanced",
         "bot.cogs.presence",
     )
 

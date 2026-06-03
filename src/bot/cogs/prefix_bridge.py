@@ -336,6 +336,20 @@ class PrefixBridgeCog(commands.Cog):
         cog = self._require_cog("UtilityCog")
         await cog.runtime(self._interaction(ctx))
 
+    @commands.command(name="avatar")
+    async def avatar(
+        self,
+        ctx: commands.Context,
+        member: disnake.Member | None = None,
+    ) -> None:
+        cog = self._require_cog("UtilityCog")
+        await cog.avatar(self._interaction(ctx), member)
+
+    @commands.command(name="poll")
+    async def poll(self, ctx: commands.Context, *, question: str) -> None:
+        cog = self._require_cog("UtilityCog")
+        await cog.poll(self._interaction(ctx), question)
+
     @commands.command(name="purge")
     @commands.has_permissions(manage_messages=True)
     @commands.bot_has_permissions(manage_messages=True)
@@ -381,6 +395,119 @@ class PrefixBridgeCog(commands.Cog):
     ) -> None:
         cog = self._require_cog("ModerationCog")
         await cog.unban(self._interaction(ctx), user_id, reason)
+
+    @commands.command(name="tempban")
+    @commands.has_permissions(ban_members=True)
+    @commands.bot_has_permissions(ban_members=True)
+    async def tempban(
+        self,
+        ctx: commands.Context,
+        member: disnake.Member,
+        duration_minutes: int = 60,
+        *,
+        reason: str = "No reason provided",
+    ) -> None:
+        cog = self._require_cog("ModerationCog")
+        await cog.tempban(self._interaction(ctx), member, duration_minutes, reason)
+
+    @commands.command(name="timeout")
+    @commands.has_permissions(moderate_members=True)
+    @commands.bot_has_permissions(moderate_members=True)
+    async def timeout(
+        self,
+        ctx: commands.Context,
+        member: disnake.Member,
+        duration_minutes: int = 10,
+        *,
+        reason: str = "No reason provided",
+    ) -> None:
+        cog = self._require_cog("ModerationCog")
+        await cog.timeout(self._interaction(ctx), member, duration_minutes, reason)
+
+    @commands.command(name="untimeout")
+    @commands.has_permissions(moderate_members=True)
+    @commands.bot_has_permissions(moderate_members=True)
+    async def untimeout(
+        self,
+        ctx: commands.Context,
+        member: disnake.Member,
+        *,
+        reason: str = "No reason provided",
+    ) -> None:
+        cog = self._require_cog("ModerationCog")
+        await cog.untimeout(self._interaction(ctx), member, reason)
+
+    @commands.command(name="warn")
+    @commands.has_permissions(moderate_members=True)
+    async def warn(
+        self,
+        ctx: commands.Context,
+        member: disnake.Member,
+        *,
+        reason: str = "No reason provided",
+    ) -> None:
+        cog = self._require_cog("ModerationCog")
+        await cog.warn(self._interaction(ctx), member, reason)
+
+    @commands.command(name="warnings")
+    @commands.has_permissions(moderate_members=True)
+    async def warnings(self, ctx: commands.Context, member: disnake.Member) -> None:
+        cog = self._require_cog("ModerationCog")
+        await cog.warnings(self._interaction(ctx), member)
+
+    @commands.group(name="music", invoke_without_command=True)
+    async def music_group(self, ctx: commands.Context) -> None:
+        await ctx.send(embed=build_standard_embed("Use `music <subcommand>`."))
+
+    @music_group.command(name="join")
+    async def music_join(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.join(self._interaction(ctx))
+
+    @music_group.command(name="leave")
+    async def music_leave(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.leave(self._interaction(ctx))
+
+    @music_group.command(name="play")
+    async def music_play(self, ctx: commands.Context, *, source: str) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.play(self._interaction(ctx), source)
+
+    @music_group.command(name="pause")
+    async def music_pause(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.pause(self._interaction(ctx))
+
+    @music_group.command(name="resume")
+    async def music_resume(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.resume(self._interaction(ctx))
+
+    @music_group.command(name="skip")
+    async def music_skip(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.skip(self._interaction(ctx))
+
+    @music_group.command(name="stop")
+    async def music_stop(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.stop(self._interaction(ctx))
+
+    @music_group.command(name="queue")
+    async def music_queue(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.queue(self._interaction(ctx))
+
+    @music_group.command(name="volume")
+    async def music_volume(self, ctx: commands.Context, percent: int = 50) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.volume(self._interaction(ctx), percent)
+
+    @music_group.command(name="nowplaying")
+    async def music_nowplaying(self, ctx: commands.Context) -> None:
+        cog = self._require_cog("MusicCog")
+        await cog.nowplaying(self._interaction(ctx))
 
     @commands.group(name="welcome", invoke_without_command=True)
     async def welcome_group(self, ctx: commands.Context) -> None:
@@ -468,6 +595,12 @@ class PrefixBridgeCog(commands.Cog):
     async def security_disable(self, ctx: commands.Context) -> None:
         cog = self._require_cog("SecurityCog")
         await cog.disable(self._interaction(ctx))
+
+    @security_group.command(name="antinuke")
+    @commands.has_permissions(manage_guild=True)
+    async def security_antinuke(self, ctx: commands.Context, enabled: bool) -> None:
+        cog = self._require_cog("SecurityCog")
+        await cog.antinuke(self._interaction(ctx), enabled)
 
     @commands.group(name="acl", invoke_without_command=True)
     async def acl_group(self, ctx: commands.Context) -> None:

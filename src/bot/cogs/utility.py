@@ -117,6 +117,39 @@ class UtilityCog(BaseCog):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+
+    @commands.slash_command(name="avatar", description="Show a user's avatar")
+    async def avatar(
+        self,
+        interaction: ApplicationCommandInteraction,
+        member: disnake.Member | None = None,
+    ) -> None:
+        target = member or interaction.author
+        if not isinstance(target, (disnake.Member, disnake.User)):
+            await interaction.response.send_message(
+                "Could not resolve user avatar.",
+                ephemeral=True,
+            )
+            return
+
+        embed = build_standard_embed("Avatar preview.", title=f"Avatar: {target}")
+        embed.set_image(url=target.display_avatar.url)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @commands.slash_command(name="poll", description="Create a simple yes/no poll")
+    async def poll(
+        self,
+        interaction: ApplicationCommandInteraction,
+        question: str = commands.Param(min_length=3, max_length=200),
+    ) -> None:
+        embed = build_standard_embed(question, title="Poll")
+        embed.add_field(
+            name="How to vote",
+            value="Reply in this channel with `yes` or `no`.",
+            inline=False,
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=False)
+
     @commands.slash_command(
         name="runtime",
         description="Show real-time runtime settings snapshot for this guild",
@@ -131,7 +164,10 @@ class UtilityCog(BaseCog):
 
         snapshot = await self.get_runtime_snapshot(interaction.guild_id)
         await interaction.response.send_message(
-            f"Runtime snapshot -> prefix: `{snapshot.prefix}` | status: `{snapshot.status}`",
+            (
+                f"Runtime snapshot -> prefix: `{snapshot.prefix}` | "
+                f"status: `{snapshot.status}` | language: `{snapshot.language}`"
+            ),
             ephemeral=True,
         )
 

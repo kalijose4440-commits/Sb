@@ -46,6 +46,7 @@ class Settings(BaseSettings):
         "bot.cogs.reaction_roles",
         "bot.cogs.announcements",
         "bot.cogs.analytics",
+        "bot.cogs.music",
         "bot.cogs.presence",
     )
 

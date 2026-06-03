@@ -25,6 +25,9 @@ class SecurityCog(BaseCog):
     ) -> None:
         super().__init__(bot=bot, session_factory=session_factory)
         self._join_windows: dict[int, deque[datetime]] = defaultdict(deque)
+        self._ban_windows: dict[int, deque[datetime]] = defaultdict(deque)
+        self._channel_delete_windows: dict[int, deque[datetime]] = defaultdict(deque)
+        self._anti_nuke_enabled: dict[int, bool] = defaultdict(lambda: True)
         self._last_alert_at: dict[int, datetime] = {}
         self._mitigation_release_loop.start()
 
@@ -41,6 +44,8 @@ class SecurityCog(BaseCog):
                 "security configure",
                 "security enable",
                 "security disable",
+                "security antinuke",
+                "security antinuke",
             ],
             prefix_examples=[
                 "security status",
@@ -168,6 +173,23 @@ class SecurityCog(BaseCog):
 
         await interaction.response.send_message("Raid detection disabled.", ephemeral=True)
 
+
+    @security.sub_command(name="antinuke", description="Toggle anti-nuke runtime protection")
+    @commands.has_permissions(manage_guild=True)
+    async def antinuke(self, interaction: ApplicationCommandInteraction, enabled: bool) -> None:
+        if interaction.guild_id is None:
+            await interaction.response.send_message(
+                "This command can only be used in a server.",
+                ephemeral=True,
+            )
+            return
+
+        self._anti_nuke_enabled[interaction.guild_id] = enabled
+        await interaction.response.send_message(
+            f"Anti-nuke runtime guard {'enabled' if enabled else 'disabled'}.",
+            ephemeral=True,
+        )
+
     @commands.Cog.listener("on_member_join")
     async def on_member_join(self, member: disnake.Member) -> None:
         guild = member.guild
@@ -223,6 +245,50 @@ class SecurityCog(BaseCog):
             repository = RaidProtectionRepository(session)
             await repository.mark_triggered(guild.id, now)
             await session.commit()
+
+    @commands.Cog.listener("on_member_ban")
+    async def on_member_ban(self, guild: disnake.Guild, _user: disnake.User | disnake.Member) -> None:
+        await self._check_mass_action(guild, action="member_ban")
+
+    @commands.Cog.listener("on_guild_channel_delete")
+    async def on_guild_channel_delete(self, channel: disnake.abc.GuildChannel) -> None:
+        await self._check_mass_action(channel.guild, action="channel_delete")
+
+    async def _check_mass_action(self, guild: disnake.Guild, *, action: str) -> None:
+        if not self._anti_nuke_enabled[guild.id]:
+            return
+
+        window = self._ban_windows[guild.id] if action == "member_ban" else self._channel_delete_windows[guild.id]
+        now = utc_now()
+        count = update_join_window(window, now, window_seconds=20)
+        if count < 3:
+            return
+
+        async with self._session_factory() as session:
+            repository = RaidProtectionRepository(session)
+            config = await repository.get_config(guild.id)
+
+        if config is None or not config.enabled:
+            return
+
+        mitigation_note = await self._apply_mitigation(guild, config, now)
+        alert_channel = self._resolve_alert_channel(guild, config.alert_channel_id)
+        if alert_channel is not None:
+            embed = build_standard_embed(
+                (
+                    f"Detected burst `{action}` activity: **{count}** events in 20s.
+"
+                    "Automatic mitigation flow has been evaluated."
+                ),
+                title="Security alert: anti-nuke trigger",
+            )
+            embed.add_field(name="Action", value=action, inline=True)
+            embed.add_field(name="Count", value=str(count), inline=True)
+            embed.add_field(name="Mitigation", value=mitigation_note, inline=False)
+            try:
+                await alert_channel.send(embed=embed)
+            except disnake.HTTPException:
+                return
 
     async def _apply_mitigation(
         self,

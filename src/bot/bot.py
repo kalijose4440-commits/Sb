@@ -36,15 +36,19 @@ async def resolve_prefix(bot: DashboardBot, message: disnake.Message) -> str | l
 
     try:
         snapshot = await bot.bridge.get_or_load_settings(message.guild.id)
-        prefix = snapshot.prefix or default_prefix
+        configured_prefix = snapshot.prefix or default_prefix
     except Exception:
         bot.logger.exception(
             "prefix_resolution_failed",
             extra={"guild_id": message.guild.id, "fallback_prefix": default_prefix},
         )
-        prefix = default_prefix
+        configured_prefix = default_prefix
 
-    return commands.when_mentioned_or(prefix)(bot, message)
+    prefixes = [default_prefix]
+    if configured_prefix not in prefixes:
+        prefixes.append(configured_prefix)
+
+    return commands.when_mentioned_or(*prefixes)(bot, message)
 
 
 def create_bot(settings: Settings, bridge: BridgeState) -> DashboardBot:

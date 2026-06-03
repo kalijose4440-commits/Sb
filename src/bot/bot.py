@@ -185,6 +185,7 @@ async def main() -> None:
         session_factory=session_factory,
         default_prefix=settings.default_prefix,
         default_status=settings.default_status,
+        default_language=settings.default_language,
     )
     bot = create_bot(settings=settings, bridge=bridge)
     await _load_extensions(bot)

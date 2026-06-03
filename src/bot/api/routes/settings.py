@@ -35,11 +35,13 @@ async def get_guild_settings(guild_id: int, request: Request) -> GuildSettingsRe
                 guild_id,
                 default_prefix=bridge.default_prefix,
                 default_status=bridge.default_status,
+                default_language=bridge.default_language,
             )
             await session.commit()
 
     await bridge.publish_prefix_change(guild_id=guild_id, prefix=row.prefix)
     await bridge.publish_status_change(guild_id=guild_id, status=row.status)
+    await bridge.publish_language_change(guild_id=guild_id, language=row.language)
     return GuildSettingsRead.model_validate(row, from_attributes=True)
 
 
@@ -58,8 +60,10 @@ async def patch_guild_settings(
             guild_id,
             prefix=payload.prefix,
             status=payload.status,
+            language=payload.language,
             default_prefix=bridge.default_prefix,
             default_status=bridge.default_status,
+            default_language=bridge.default_language,
         )
         await session.commit()
 
@@ -67,6 +71,8 @@ async def patch_guild_settings(
         await bridge.publish_prefix_change(guild_id=guild_id, prefix=payload.prefix)
     if payload.status is not None:
         await bridge.publish_status_change(guild_id=guild_id, status=payload.status)
+    if payload.language is not None:
+        await bridge.publish_language_change(guild_id=guild_id, language=payload.language)
 
     return GuildSettingsRead.model_validate(row, from_attributes=True)
 

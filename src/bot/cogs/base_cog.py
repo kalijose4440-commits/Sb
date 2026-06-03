@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import disnake
 from disnake.ext import commands
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -39,11 +38,13 @@ class BaseCog(commands.Cog):
                 guild_id,
                 default_prefix=self.bridge.default_prefix,
                 default_status=self.bridge.default_status,
+                default_language=self.bridge.default_language,
             )
             await session.commit()
 
         await self.bridge.publish_prefix_change(guild_id=guild_id, prefix=row.prefix)
         await self.bridge.publish_status_change(guild_id=guild_id, status=row.status)
+        await self.bridge.publish_language_change(guild_id=guild_id, language=row.language)
         return GuildSettingsRead.model_validate(row, from_attributes=True)
 
     async def update_prefix(self, guild_id: int, prefix: str) -> GuildSettingsRead:
@@ -55,6 +56,7 @@ class BaseCog(commands.Cog):
                 guild_id=guild_id,
                 prefix=prefix,
                 default_status=self.bridge.default_status,
+                default_language=self.bridge.default_language,
             )
             await session.commit()
 
@@ -70,10 +72,27 @@ class BaseCog(commands.Cog):
                 guild_id=guild_id,
                 status=status,
                 default_prefix=self.bridge.default_prefix,
+                default_language=self.bridge.default_language,
             )
             await session.commit()
 
         await self.bridge.publish_status_change(guild_id=guild_id, status=status)
+        return GuildSettingsRead.model_validate(row, from_attributes=True)
+
+    async def update_language(self, guild_id: int, language: str) -> GuildSettingsRead:
+        """Persist a language update and publish it through the API bridge."""
+
+        async with self._session_factory() as session:
+            repository = GuildSettingsRepository(session)
+            row = await repository.upsert_language(
+                guild_id=guild_id,
+                language=language,
+                default_prefix=self.bridge.default_prefix,
+                default_status=self.bridge.default_status,
+            )
+            await session.commit()
+
+        await self.bridge.publish_language_change(guild_id=guild_id, language=language)
         return GuildSettingsRead.model_validate(row, from_attributes=True)
 
 

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     default_prefix: str = Field(default="!", min_length=1, max_length=16)
     default_status: str = Field(default="online", min_length=1, max_length=64)
+    default_language: str = Field(default="en", min_length=2, max_length=8)
     bot_activity: str = Field(default="Serving your community")
 
     enable_members_intent: bool = Field(default=False)
@@ -60,3 +61,11 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_log_level(cls, value: str) -> str:
         return value.upper()
+
+    @field_validator("default_language")
+    @classmethod
+    def normalize_default_language(cls, value: str) -> str:
+        normalized = value.lower().strip()
+        if normalized not in {"en", "es", "fr", "de", "ru"}:
+            raise ValueError("default_language must be one of en/es/fr/de/ru")
+        return normalized

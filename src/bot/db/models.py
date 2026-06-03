@@ -25,6 +25,7 @@ class GuildSettings(Base):
     guild_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
     prefix: Mapped[str] = mapped_column(String(16), nullable=False, default="!")
     status: Mapped[str] = mapped_column(String(64), nullable=False, default="online")
+    language: Mapped[str] = mapped_column(String(8), nullable=False, default="en")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

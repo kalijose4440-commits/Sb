@@ -41,8 +41,10 @@ class GuildSettingsRepository:
         *,
         prefix: str | None = None,
         status: str | None = None,
+        language: str | None = None,
         default_prefix: str = "!",
         default_status: str = "online",
+        default_language: str = "en",
     ) -> GuildSettings:
         row = await self.get_by_guild_id(guild_id)
         if row is None:
@@ -50,6 +52,7 @@ class GuildSettingsRepository:
                 guild_id=guild_id,
                 prefix=prefix or default_prefix,
                 status=status or default_status,
+                language=language or default_language,
             )
             self._session.add(row)
         else:
@@ -57,6 +60,8 @@ class GuildSettingsRepository:
                 row.prefix = prefix
             if status is not None:
                 row.status = status
+            if language is not None:
+                row.language = language
 
         await self._session.flush()
         return row
@@ -67,8 +72,14 @@ class GuildSettingsRepository:
         prefix: str,
         *,
         default_status: str = "online",
+        default_language: str = "en",
     ) -> GuildSettings:
-        return await self.upsert(guild_id, prefix=prefix, default_status=default_status)
+        return await self.upsert(
+            guild_id,
+            prefix=prefix,
+            default_status=default_status,
+            default_language=default_language,
+        )
 
     async def upsert_status(
         self,
@@ -76,8 +87,30 @@ class GuildSettingsRepository:
         status: str,
         *,
         default_prefix: str = "!",
+        default_language: str = "en",
     ) -> GuildSettings:
-        return await self.upsert(guild_id, status=status, default_prefix=default_prefix)
+        return await self.upsert(
+            guild_id,
+            status=status,
+            default_prefix=default_prefix,
+            default_language=default_language,
+        )
+
+    async def upsert_language(
+        self,
+        guild_id: int,
+        language: str,
+        *,
+        default_prefix: str = "!",
+        default_status: str = "online",
+    ) -> GuildSettings:
+        return await self.upsert(
+            guild_id,
+            language=language,
+            default_prefix=default_prefix,
+            default_status=default_status,
+            default_language=language,
+        )
 
 
 class TicketRepository:

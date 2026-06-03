@@ -7,8 +7,10 @@ import disnake
 from disnake.ext import commands
 
 from bot.core.error_hints import classify_command_error
+from bot.core.i18n import normalize_language, supported_languages_display, t
 from bot.core.prefix_adapter import PrefixInteractionAdapter
 from bot.core.response_style import build_standard_embed
+from bot.db.repositories import GuildSettingsRepository
 
 
 class PrefixBridgeCog(commands.Cog):
@@ -51,9 +53,36 @@ class PrefixBridgeCog(commands.Cog):
                 )
             return default_prefix
 
+    async def _resolved_language(self, ctx: commands.Context) -> str:
+        default_language = "en"
+        settings = getattr(self.bot, "settings", None)
+        if settings is not None:
+            default_language = getattr(settings, "default_language", default_language)
+
+        if ctx.guild is None:
+            return normalize_language(default_language)
+
+        bridge = getattr(self.bot, "bridge", None)
+        if bridge is None:
+            return normalize_language(default_language)
+
+        try:
+            snapshot = await bridge.get_or_load_settings(ctx.guild.id)
+            return normalize_language(snapshot.language)
+        except Exception:
+            logger = getattr(self.bot, "logger", None)
+            if logger is not None:
+                logger.exception(
+                    "help_language_resolution_failed",
+                    extra={"guild_id": ctx.guild.id, "fallback_language": default_language},
+                )
+            return normalize_language(default_language)
+
+
     @commands.command(name="help")
     async def help_command(self, ctx: commands.Context, *, category: str | None = None) -> None:
         prefix = await self._resolved_prefix(ctx)
+        language = await self._resolved_language(ctx)
         all_commands = sorted(self.bot.commands, key=lambda command: command.name)
         group_commands = [
             command
@@ -68,15 +97,13 @@ class PrefixBridgeCog(commands.Cog):
 
         if category is None:
             embed = build_standard_embed(
-                (
-                    f"Current prefix: `{prefix}`\n"
-                    f"Use `{prefix}help <category>` for detailed subcommand usage."
-                ),
+                t(language, "help.dashboard_intro", prefix=prefix),
                 title="Command Dashboard",
             )
             embed.add_field(
                 name="Core Commands",
-                value="\n".join(f"- `{prefix}{command.name}`" for command in regular_commands)
+                value="
+".join(f"- `{prefix}{command.name}`" for command in regular_commands)
                 or "- None",
                 inline=False,
             )
@@ -89,14 +116,19 @@ class PrefixBridgeCog(commands.Cog):
                 )
                 examples = ", ".join(f"`{prefix}{group.name} {name}`" for name in subs[:2])
                 value = (
-                    f"Use `{prefix}{group.name} <subcommand>`\n"
+                    f"Use `{prefix}{group.name} <subcommand>`
+"
                     f"Subcommands: {', '.join(subs) if subs else 'none'}"
                 )
                 if examples:
-                    value += f"\nExamples: {examples}"
-                value += (
-                    f"\nQuick fix: run `{prefix}help {group.name}` "
-                    "for argument format and checks."
+                    value += f"
+Examples: {examples}"
+                value += "
+" + t(
+                    language,
+                    "help.quick_fix",
+                    prefix=prefix,
+                    category=group.name,
                 )
                 embed.add_field(name=group.name.title(), value=value, inline=False)
 
@@ -109,8 +141,10 @@ class PrefixBridgeCog(commands.Cog):
             await ctx.send(
                 embed=build_standard_embed(
                     (
-                        f"Unknown category `{category}`.\n"
-                        f"Available categories: {category_names}"
+                        t(language, "help.unknown_category", category=category)
+                        + "
+"
+                        + t(language, "help.available_categories", categories=category_names)
                     ),
                     title="Command Help",
                 )
@@ -124,12 +158,13 @@ class PrefixBridgeCog(commands.Cog):
                 if not subcommand.hidden
             ]
             embed = build_standard_embed(
-                f"Detailed subcommands for `{command.name}`.",
+                t(language, "help.subcommands_detail", command=command.name),
                 title=f"{command.name.title()} Category",
             )
             embed.add_field(
                 name="Subcommands",
-                value="\n".join(sub_lines) or "- None",
+                value="
+".join(sub_lines) or "- None",
                 inline=False,
             )
             await ctx.send(embed=embed)
@@ -137,8 +172,88 @@ class PrefixBridgeCog(commands.Cog):
 
         await ctx.send(
             embed=build_standard_embed(
-                f"Usage: `{prefix}{command.qualified_name}`",
+                t(
+                    language,
+                    "help.command_usage",
+                    usage=f"{prefix}{command.qualified_name}",
+                ),
                 title=f"{command.name.title()} Command",
+            )
+        )
+
+    @commands.group(name="language", invoke_without_command=True)
+    async def language_group(self, ctx: commands.Context) -> None:
+        language = await self._resolved_language(ctx)
+        await ctx.send(
+            embed=build_standard_embed(
+                t(language, "language.current", language=language),
+                title="Language",
+            )
+        )
+
+    @language_group.command(name="status")
+    async def language_status(self, ctx: commands.Context) -> None:
+        language = await self._resolved_language(ctx)
+        await ctx.send(
+            embed=build_standard_embed(
+                t(language, "language.current", language=language),
+                title="Language",
+            )
+        )
+
+    @language_group.command(name="set")
+    @commands.has_permissions(manage_guild=True)
+    async def language_set(self, ctx: commands.Context, language: str) -> None:
+        if ctx.guild is None:
+            await ctx.send(
+                embed=build_standard_embed(
+                    "This command can only be used in a server.",
+                    title="Language",
+                )
+            )
+            return
+
+        normalized = normalize_language(language)
+        if normalized != language.lower().strip() or normalized not in {
+            "en",
+            "es",
+            "fr",
+            "de",
+            "ru",
+        }:
+            current_language = await self._resolved_language(ctx)
+            await ctx.send(
+                embed=build_standard_embed(
+                    t(
+                        current_language,
+                        "language.invalid",
+                        language=language,
+                        supported=supported_languages_display(),
+                    ),
+                    title="Language",
+                )
+            )
+            return
+
+        bridge = getattr(self.bot, "bridge", None)
+        if bridge is None:
+            raise commands.CommandError("BridgeState is not attached to the bot")
+
+        async with bridge.session_factory() as session:
+            repository = GuildSettingsRepository(session)
+            await repository.upsert_language(
+                guild_id=ctx.guild.id,
+                language=normalized,
+                default_prefix=bridge.default_prefix,
+                default_status=bridge.default_status,
+            )
+            await session.commit()
+
+        await bridge.publish_language_change(ctx.guild.id, normalized)
+        await ctx.send(
+            embed=build_standard_embed(
+                t(normalized, "language.updated", language=normalized),
+                title="Language",
             )
         )
 
@@ -152,8 +267,14 @@ class PrefixBridgeCog(commands.Cog):
             return
 
         prefix = await self._resolved_prefix(ctx)
+        language = await self._resolved_language(ctx)
         command_name = ctx.command.qualified_name if ctx.command is not None else None
-        hint = classify_command_error(error, prefix=prefix, command_name=command_name)
+        hint = classify_command_error(
+            error,
+            prefix=prefix,
+            command_name=command_name,
+            language=language,
+        )
         embed = build_standard_embed(hint.reason, title=hint.title)
         embed.add_field(name="Possible fix", value=hint.possible_fix, inline=False)
 

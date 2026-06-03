@@ -30,6 +30,12 @@ async def test_base_cog_persists_and_publishes_prefix(tmp_path) -> None:
 
     read_model = await cog.get_guild_settings(guild_id=1001)
     assert read_model.prefix == "#"
+    assert read_model.language == "en"
+
+    await cog.update_language(guild_id=1001, language="fr")
+    language_event = await queue.get()
+    assert language_event.field == "language"
+    assert language_event.value == "fr"
 
     await bridge.unregister_listener(queue)
     await engine.dispose()

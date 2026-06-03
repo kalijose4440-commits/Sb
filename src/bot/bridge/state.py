@@ -14,12 +14,13 @@ class GuildSettingsSnapshot:
     guild_id: int
     prefix: str
     status: str
+    language: str
 
 
 @dataclass(slots=True)
 class BridgeEvent:
     guild_id: int
-    field: Literal["prefix", "status"]
+    field: Literal["prefix", "status", "language"]
     value: str
 
 
@@ -32,10 +33,12 @@ class BridgeState:
         session_factory: async_sessionmaker[AsyncSession],
         default_prefix: str = "!",
         default_status: str = "online",
+        default_language: str = "en",
     ) -> None:
         self.session_factory = session_factory
         self.default_prefix = default_prefix
         self.default_status = default_status
+        self.default_language = default_language
         self._cache: dict[int, GuildSettingsSnapshot] = {}
         self._listeners: set[asyncio.Queue[BridgeEvent]] = set()
         self._lock = asyncio.Lock()
@@ -54,12 +57,14 @@ class BridgeState:
                 guild_id=guild_id,
                 prefix=self.default_prefix,
                 status=self.default_status,
+                language=self.default_language,
             )
         else:
             snapshot = GuildSettingsSnapshot(
                 guild_id=row.guild_id,
                 prefix=row.prefix,
                 status=row.status,
+                language=row.language,
             )
 
         async with self._lock:
@@ -72,6 +77,9 @@ class BridgeState:
     async def publish_status_change(self, guild_id: int, status: str) -> None:
         await self._update_and_publish(guild_id=guild_id, field="status", value=status)
 
+    async def publish_language_change(self, guild_id: int, language: str) -> None:
+        await self._update_and_publish(guild_id=guild_id, field="language", value=language)
+
     async def register_listener(self) -> asyncio.Queue[BridgeEvent]:
         queue: asyncio.Queue[BridgeEvent] = asyncio.Queue()
         async with self._lock:
@@ -83,7 +91,11 @@ class BridgeState:
             self._listeners.discard(queue)
 
     async def _update_and_publish(
-        self, *, guild_id: int, field: Literal["prefix", "status"], value: str
+        self,
+        *,
+        guild_id: int,
+        field: Literal["prefix", "status", "language"],
+        value: str,
     ) -> None:
         async with self._lock:
             current = self._cache.get(guild_id)
@@ -92,12 +104,15 @@ class BridgeState:
                     guild_id=guild_id,
                     prefix=self.default_prefix,
                     status=self.default_status,
+                    language=self.default_language,
                 )
 
             if field == "prefix":
                 current.prefix = value
-            else:
+            elif field == "status":
                 current.status = value
+            else:
+                current.language = value
 
             self._cache[guild_id] = current
             listeners = tuple(self._listeners)

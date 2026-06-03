@@ -22,15 +22,17 @@ async def test_patch_settings_updates_prefix_and_status(tmp_path) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         patch_response = await client.patch(
             "/api/v1/settings/42",
-            json={"prefix": "?", "status": "busy"},
+            json={"prefix": "?", "status": "busy", "language": "es"},
         )
         assert patch_response.status_code == 200
         assert patch_response.json()["prefix"] == "?"
         assert patch_response.json()["status"] == "busy"
+        assert patch_response.json()["language"] == "es"
 
         get_response = await client.get("/api/v1/settings/42")
         assert get_response.status_code == 200
         assert get_response.json()["prefix"] == "?"
         assert get_response.json()["status"] == "busy"
+        assert get_response.json()["language"] == "es"
 
     await engine.dispose()

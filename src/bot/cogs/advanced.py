@@ -11,6 +11,7 @@ from statistics import mean
 
 from disnake.ext import commands
 
+from bot.core.command_aliases import register_multilingual_aliases
 from bot.core.response_style import build_standard_embed
 
 # mypy: ignore-errors
@@ -21,6 +22,12 @@ class AdvancedPrefixCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+
+    async def cog_load(self) -> None:
+        added = register_multilingual_aliases(self.bot, ("math", "text", "tools"))
+        logger = getattr(self.bot, "logger", None)
+        if logger is not None:
+            logger.info("advanced_multilingual_aliases_registered", extra={"alias_count": added})
 
     async def _send(self, ctx: commands.Context, title: str, description: str) -> None:
         await ctx.send(embed=build_standard_embed(description, title=title))

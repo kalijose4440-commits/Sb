@@ -6,6 +6,7 @@ from typing import Any
 import disnake
 from disnake.ext import commands
 
+from bot.core.command_aliases import register_multilingual_aliases
 from bot.core.error_hints import classify_command_error
 from bot.core.i18n import (
     help_command_for_language,
@@ -23,6 +24,46 @@ class PrefixBridgeCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+
+    async def cog_load(self) -> None:
+        added = register_multilingual_aliases(
+            self.bot,
+            (
+                "help",
+                "language",
+                "settings",
+                "setprefix",
+                "setstatus",
+                "ping",
+                "botinfo",
+                "serverinfo",
+                "userinfo",
+                "runtime",
+                "avatar",
+                "poll",
+                "purge",
+                "kick",
+                "ban",
+                "unban",
+                "tempban",
+                "timeout",
+                "untimeout",
+                "warn",
+                "warnings",
+                "music",
+                "welcome",
+                "security",
+                "acl",
+                "ticket",
+                "automod",
+                "reactionrole",
+                "announce",
+                "analytics",
+            ),
+        )
+        logger = getattr(self.bot, "logger", None)
+        if logger is not None:
+            logger.info("prefix_multilingual_aliases_registered", extra={"alias_count": added})
 
     def _interaction(self, ctx: commands.Context) -> PrefixInteractionAdapter:
         return PrefixInteractionAdapter(ctx)

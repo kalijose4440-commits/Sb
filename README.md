@@ -123,6 +123,7 @@ Ticket close/transcript can generate and persist transcript snapshots.
 - Prefix-first mode is enabled by default (`!`) and per-guild custom prefixes are supported.
 - Use `!language status` and `!language set <en|es|fr|de|ru>` to manage localized command responses per server.
 - Default server language can be set via `DEFAULT_LANGUAGE` in `.env`.
+- Every command token also has translated aliases in ES/FR/DE/RU (for example: `!music play`, `!musica reproducir`, `!musique lire`, `!musik spielen`, `!muzyka igrat`).
 
 ### Advanced Prefix Categories (52 new subcommands)
 - `!math` category: 18 subcommands for arithmetic and calculator flows
